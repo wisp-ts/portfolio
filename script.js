@@ -509,7 +509,6 @@ document.addEventListener("click", (e) => {
   
   if (!link) return;
   
-  // Skip preview links — handled by preview overlay
   if (link.dataset.preview) return;
   
   const href = link.getAttribute("href");
@@ -519,7 +518,6 @@ document.addEventListener("click", (e) => {
   
   e.preventDefault();
   
-  // Fade out
   document.body.classList.add("page-transitioning");
   
   setTimeout(() => {

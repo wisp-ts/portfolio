@@ -1,0 +1,56 @@
+[
+  {
+    "title": "Forms+",
+    "tag": "Developer Tool",
+    "description": "A tool focused on building and designing MCBE forms with better structure, cleaner developer experience, and stronger presentation.",
+    "stack": ["JavaScript", "TypeScript", "Tooling"],
+    "links": [
+      { "label": "GitHub", "url": "https://github.com/wisp-ts/forms-plus", "style": "primary" }
+    ]
+  },
+  {
+    "title": "Portfolio Site",
+    "tag": "Website",
+    "description": "A multi-page personal portfolio focused on stronger layout, theme customization, responsive behavior, accessibility improvements, and polished presentation.",
+    "stack": ["HTML", "CSS", "JavaScript"],
+    "links": [
+      { "label": "GitHub", "url": "https://github.com/wisp-ts/portfolio", "style": "primary" }
+    ]
+  },
+  {
+    "title": "EasyMusic",
+    "tag": "Website",
+    "description": "A simple way to listen to your favorite music, artist, podcasts, audio book, etc.",
+    "stack": ["JavaScript", "Youtube API", "UI"],
+    "links": [
+      { "label": "Live Demo", "url": "https://easy-music-weld.vercel.app/", "style": "primary", "preview": "https://easy-music-weld.vercel.app/" },
+      { "label": "GitHub", "url": "https://github.com/wisp-ts/EasyMusic", "style": "secondary" }    ]
+  },
+  {
+    "title": "Cord Hider",
+    "tag": "MCBE Addon",
+    "description": "A simple way to hide your coordinates from being displayed on your screen. Useful for streamers and content creators to hide their personal base coords.",
+    "stack": ["Scripting API", "JSON", "UI"],
+    "links": [
+      { "label": "GitHub", "url": "https://github.com/wisp-ts/Cord-Hider", "style": "primary" }
+    ]
+  },
+  {
+    "title": "Item Manager",
+    "tag": "MCBE Addon",
+    "description": "A simple system to add triggers to items. If a user triggers a trigger with an item, a set line of commands will run.",
+    "stack": ["TypeScript", "Scripting API", "System flow control"],
+    "links": [
+      { "label": "Github", "url": "https://github.com/wisp-ts/Item-Manager", "style": "primary" }
+    ]
+  },
+  {
+    "title": "More Work Coming",
+    "tag": "In Progress",
+    "description": "I'm still building and improving. This portfolio will grow as I add stronger software, cleaner systems, and better project case studies.",
+    "stack": ["Growth", "Learning", "Iteration"],
+    "links": [
+      { "label": "Reach Out", "url": "contact.html", "style": "primary" }
+    ]
+  }
+]

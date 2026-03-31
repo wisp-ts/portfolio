@@ -14,7 +14,8 @@
     "description": "A multi-page personal portfolio focused on stronger layout, theme customization, responsive behavior, accessibility improvements, and polished presentation.",
     "stack": ["HTML", "CSS", "JavaScript"],
     "links": [
-      { "label": "GitHub", "url": "https://github.com/wisp-ts/portfolio", "style": "primary" }
+      { "label": "Live Site", "url": "https://wispts.xyz", "style": "primary", "preview": "https://wispts.xyz" },
+      { "label": "GitHub", "url": "https://github.com/wisp-ts/portfolio", "style": "secondary" }
     ]
   },
   {

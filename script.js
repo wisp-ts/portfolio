@@ -9,6 +9,14 @@ if (navToggle && navLinks) {
     navToggle.classList.toggle("active");
     navLinks.classList.toggle("open");
   });
+
+  // Close mobile nav when a link is clicked
+  navLinks.querySelectorAll("a").forEach(link => {
+    link.addEventListener("click", () => {
+      navToggle.classList.remove("active");
+      navLinks.classList.remove("open");
+    });
+  });
 }
 
 // ========================
@@ -455,9 +463,20 @@ const settingsPanel = document.getElementById("settingsPanel");
 const closeSettings = document.getElementById("closeSettings");
 
 if (settingsFab && settingsPanel) {
-  settingsFab.addEventListener("click", () => {
+  settingsFab.addEventListener("click", (e) => {
+    e.stopPropagation();
     settingsPanel.classList.toggle("open");
     document.body.classList.toggle("settings-open");
+  });
+
+  // Close settings on tap outside (mobile-friendly)
+  document.addEventListener("click", (e) => {
+    if (settingsPanel.classList.contains("open") &&
+        !settingsPanel.contains(e.target) &&
+        !settingsFab.contains(e.target)) {
+      settingsPanel.classList.remove("open");
+      document.body.classList.remove("settings-open");
+    }
   });
 }
 
@@ -871,7 +890,7 @@ const interactiveBg = (() => {
 
   const ctx = canvas.getContext("2d");
   let w, h, particles = [], mouse = { x: -9999, y: -9999 }, animId;
-  const COUNT = Math.min(60, Math.floor(window.innerWidth / 22));
+  const COUNT = window.innerWidth <= 760 ? Math.min(25, Math.floor(window.innerWidth / 30)) : Math.min(60, Math.floor(window.innerWidth / 22));
   const INTERACT_RADIUS = 140;
   const LINE_DIST = 120;
 
@@ -1011,79 +1030,85 @@ const interactiveBg = (() => {
 
 // ========================
 // OPTIONAL: SMOOTH CARD TILT (OPTIMIZED - Event Delegation)
+// Only on devices with hover (not touch)
 // ========================
+const canHover = window.matchMedia("(hover: hover)").matches;
 const cardContainer = document.querySelector("main") || document.body;
 let currentTiltCard = null;
 
-cardContainer.addEventListener("mousemove", (e) => {
-  const card = e.target.closest(".card, .dashboard-card, .stat-card, .cta-card");
+if (canHover) {
+  cardContainer.addEventListener("mousemove", (e) => {
+    const card = e.target.closest(".card, .dashboard-card, .stat-card, .cta-card");
 
-  if (currentTiltCard && currentTiltCard !== card) {
-    currentTiltCard.style.setProperty("--rotateX", "0deg");
-    currentTiltCard.style.setProperty("--rotateY", "0deg");
-  }
-  currentTiltCard = card;
+    if (currentTiltCard && currentTiltCard !== card) {
+      currentTiltCard.style.setProperty("--rotateX", "0deg");
+      currentTiltCard.style.setProperty("--rotateY", "0deg");
+    }
+    currentTiltCard = card;
 
-  if (!card) return;
+    if (!card) return;
 
-  const rect = card.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
-  const rotateX = ((y / rect.height) - 0.5) * 10;
-  const rotateY = ((x / rect.width) - 0.5) * -10;
-  const gx = (x / rect.width) * 100;
-  const gy = (y / rect.height) * 100;
+    const rotateX = ((y / rect.height) - 0.5) * 10;
+    const rotateY = ((x / rect.width) - 0.5) * -10;
+    const gx = (x / rect.width) * 100;
+    const gy = (y / rect.height) * 100;
 
-  card.style.setProperty("--rotateX", `${rotateX}deg`);
-  card.style.setProperty("--rotateY", `${rotateY}deg`);
-  card.style.setProperty("--mouse-x", `${gx}%`);
-  card.style.setProperty("--mouse-y", `${gy}%`);
-});
+    card.style.setProperty("--rotateX", `${rotateX}deg`);
+    card.style.setProperty("--rotateY", `${rotateY}deg`);
+    card.style.setProperty("--mouse-x", `${gx}%`);
+    card.style.setProperty("--mouse-y", `${gy}%`);
+  });
 
-cardContainer.addEventListener("mouseleave", () => {
-  if (currentTiltCard) {
-    currentTiltCard.style.setProperty("--rotateX", "0deg");
-    currentTiltCard.style.setProperty("--rotateY", "0deg");
-    currentTiltCard = null;
-  }
-});
-
-// ========================
-// CURSOR GLOW — global light following the mouse
-// ========================
-(() => {
-  const glow = document.createElement("div");
-  glow.classList.add("cursor-glow");
-  document.body.appendChild(glow);
-
-  let cx = -200, cy = -200, tx = -200, ty = -200, visible = false, rafId;
-
-  function lerp(a, b, t) { return a + (b - a) * t; }
-
-  function tick() {
-    cx = lerp(cx, tx, 0.15);
-    cy = lerp(cy, ty, 0.15);
-    glow.style.transform = `translate(${cx}px, ${cy}px)`;
-    rafId = requestAnimationFrame(tick);
-  }
-
-  document.addEventListener("mousemove", (e) => {
-    tx = e.clientX;
-    ty = e.clientY;
-    if (!visible) {
-      visible = true;
-      glow.style.opacity = "1";
+  cardContainer.addEventListener("mouseleave", () => {
+    if (currentTiltCard) {
+      currentTiltCard.style.setProperty("--rotateX", "0deg");
+      currentTiltCard.style.setProperty("--rotateY", "0deg");
+      currentTiltCard = null;
     }
   });
+}
 
-  document.addEventListener("mouseleave", () => {
-    visible = false;
-    glow.style.opacity = "0";
-  });
+// ========================
+// CURSOR GLOW — global light following the mouse (desktop only)
+// ========================
+if (canHover) {
+  (() => {
+    const glow = document.createElement("div");
+    glow.classList.add("cursor-glow");
+    document.body.appendChild(glow);
 
-  tick();
-})();
+    let cx = -200, cy = -200, tx = -200, ty = -200, visible = false, rafId;
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function tick() {
+      cx = lerp(cx, tx, 0.15);
+      cy = lerp(cy, ty, 0.15);
+      glow.style.transform = `translate(${cx}px, ${cy}px)`;
+      rafId = requestAnimationFrame(tick);
+    }
+
+    document.addEventListener("mousemove", (e) => {
+      tx = e.clientX;
+      ty = e.clientY;
+      if (!visible) {
+        visible = true;
+        glow.style.opacity = "1";
+      }
+    });
+
+    document.addEventListener("mouseleave", () => {
+      visible = false;
+      glow.style.opacity = "0";
+    });
+
+    tick();
+  })();
+}
 
 // ========================
 // PREMIUM: SCROLL-TRIGGERED HEADER STATE (OPTIMIZED)

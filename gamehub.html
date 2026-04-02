@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Hub</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a12;--surface:#12121e;--card:#181828;--border:#252540;
+  --text:#e8e8f0;--muted:#888;--accent:#c8a84e;--accent2:#e8c84e;
+  --green:#4caf50;--red:#e74c5c;--blue:#5b8def;--purple:#a855f7;
+  --radius:12px;--glow:0 0 20px rgba(200,168,78,.15);
+}
+html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+body{display:flex;flex-direction:column}
+
+/* ===== HUB SCREEN ===== */
+.hub{padding:40px 24px;max-width:900px;margin:0 auto;width:100%;flex:1;display:flex;flex-direction:column;align-items:center}
+.hub-title{font-size:2rem;font-weight:700;margin-bottom:6px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hub-sub{color:var(--muted);margin-bottom:36px;font-size:.95rem}
+.game-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;width:100%}
+.game-tile{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px 24px;cursor:pointer;transition:transform .25s,border-color .25s,box-shadow .25s;text-align:center;position:relative;overflow:hidden}
+.game-tile::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(200,168,78,.06),transparent);opacity:0;transition:opacity .25s}
+.game-tile:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:var(--glow)}
+.game-tile:hover::before{opacity:1}
+.game-tile .icon{font-size:2.4rem;margin-bottom:12px;display:block}
+.game-tile h3{font-size:1.1rem;margin-bottom:6px;font-weight:600}
+.game-tile p{color:var(--muted);font-size:.82rem;line-height:1.4}
+.game-tile .best{position:absolute;top:10px;right:12px;font-size:.7rem;color:var(--accent);font-weight:600;background:rgba(200,168,78,.1);padding:2px 8px;border-radius:20px}
+
+/* ===== GAME SCREEN ===== */
+.game-screen{display:none;flex-direction:column;height:100%;width:100%}
+.game-screen.active{display:flex}
+.game-header{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);min-height:52px}
+.back-btn{background:none;border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:.85rem;transition:border-color .2s,color .2s}
+.back-btn:hover{border-color:var(--accent);color:var(--accent)}
+.game-header h2{font-size:1rem;font-weight:600;flex:1}
+.game-header .score-display{font-size:.85rem;color:var(--accent);font-weight:600}
+.game-body{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+
+/* ===== SNAKE ===== */
+#snake-canvas{border:2px solid var(--border);border-radius:8px;background:#0d0d18;display:block;max-width:100%;touch-action:none}
+.snake-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,10,18,.85);border-radius:8px;z-index:2}
+.snake-overlay h3{font-size:1.4rem;margin-bottom:4px}
+.snake-overlay .final-score{font-size:.9rem;color:var(--accent);margin-bottom:16px}
+.play-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0a0a12;border:none;padding:10px 28px;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer;transition:transform .15s}
+.play-btn:hover{transform:scale(1.05)}
+.snake-wrap{position:relative;display:inline-block}
+
+/* ===== MEMORY ===== */
+.memory-grid{display:grid;gap:10px;width:100%;max-width:440px}
+.memory-grid.size-4{grid-template-columns:repeat(4,1fr)}
+.memory-card{aspect-ratio:1;background:var(--card);border:2px solid var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:2rem;cursor:pointer;transition:transform .3s,border-color .3s;transform-style:preserve-3d;position:relative;user-select:none}
+.memory-card.flipped,.memory-card.matched{border-color:var(--accent);transform:rotateY(180deg)}
+.memory-card.matched{border-color:var(--green);opacity:.7;pointer-events:none}
+.memory-card .face{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;border-radius:calc(var(--radius) - 2px)}
+.memory-card .face.back{transform:rotateY(180deg)}
+.memory-card .face.front{background:linear-gradient(135deg,rgba(200,168,78,.08),transparent);font-size:1.2rem;color:var(--muted)}
+.memory-info{text-align:center;margin-bottom:16px}
+.memory-info span{margin:0 12px;font-size:.85rem;color:var(--muted)}
+.memory-info span b{color:var(--accent)}
+
+/* ===== TIC TAC TOE ===== */
+.ttt-board{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;max-width:320px}
+.ttt-cell{aspect-ratio:1;background:var(--card);border:2px solid var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:2.4rem;font-weight:700;cursor:pointer;transition:border-color .2s,background .2s;user-select:none}
+.ttt-cell:hover:not(.taken){border-color:var(--accent);background:rgba(200,168,78,.05)}
+.ttt-cell.taken{cursor:default}
+.ttt-cell.x{color:var(--blue)}
+.ttt-cell.o{color:var(--red)}
+.ttt-cell.win-cell{border-color:var(--green);background:rgba(76,175,80,.1);animation:winPulse .6s ease}
+@keyframes winPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.ttt-status{text-align:center;margin-bottom:14px;font-size:.95rem;min-height:24px}
+.ttt-status.win{color:var(--green)}
+.ttt-status.lose{color:var(--red)}
+.ttt-status.draw{color:var(--accent)}
+.ttt-reset{background:none;border:1px solid var(--border);color:var(--text);padding:6px 18px;border-radius:8px;cursor:pointer;font-size:.8rem;margin-top:14px;transition:border-color .2s}
+.ttt-reset:hover{border-color:var(--accent)}
+.ttt-wrap{display:flex;flex-direction:column;align-items:center}
+.ttt-scoreboard{display:flex;gap:20px;margin-bottom:14px;font-size:.8rem;color:var(--muted)}
+.ttt-scoreboard span b{color:var(--accent)}
+
+/* ===== REACTION ===== */
+.reaction-box{width:100%;max-width:480px;min-height:340px;border-radius:var(--radius);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;user-select:none;transition:background .3s;padding:40px 24px;text-align:center}
+.reaction-box.waiting{background:var(--card);border:2px solid var(--border)}
+.reaction-box.ready{background:#c0392b;border:2px solid #e74c3c}
+.reaction-box.go{background:#27ae60;border:2px solid #2ecc71}
+.reaction-box.result{background:var(--card);border:2px solid var(--accent)}
+.reaction-box.too-early{background:#e67e22;border:2px solid #f39c12}
+.reaction-box h3{font-size:1.6rem;margin-bottom:8px}
+.reaction-box p{font-size:.95rem;color:var(--muted)}
+.reaction-box .time{font-size:3rem;font-weight:700;color:var(--accent);margin:12px 0 4px}
+.reaction-box .time small{font-size:1rem;font-weight:400}
+.reaction-history{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+.reaction-history span{font-size:.75rem;padding:3px 10px;border-radius:20px;background:rgba(200,168,78,.1);color:var(--accent)}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:600px){
+  .game-grid{grid-template-columns:1fr}
+  .hub-title{font-size:1.5rem}
+  .game-tile{padding:20px 18px}
+  .memory-grid{max-width:100%}
+  .ttt-board{max-width:260px}
+  .ttt-cell{font-size:1.8rem}
+  .reaction-box{min-height:260px}
+  .reaction-box h3{font-size:1.2rem}
+  .reaction-box .time{font-size:2.2rem}
+}
+
+/* ===== MOBILE TOUCH ===== */
+.touch-controls{display:none;margin-top:16px;user-select:none}
+@media(hover:none)and(pointer:coarse){.touch-controls{display:grid;grid-template-columns:repeat(3,60px);grid-template-rows:repeat(3,60px);gap:6px;justify-content:center}
+.touch-controls button{background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:1.4rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s}
+.touch-controls button:active{background:var(--accent);color:var(--bg)}
+.touch-controls .tc-blank{visibility:hidden}}
+</style>
+</head>
+<body>
+
+<!-- ===== HUB ===== -->
+<div class="hub" id="hub">
+  <h1 class="hub-title">Game Hub</h1>
+  <p class="hub-sub">Pick a game to play</p>
+  <div class="game-grid">
+    <div class="game-tile" data-game="snake">
+      <span class="icon">🐍</span>
+      <h3>Snake</h3>
+      <p>Classic snake — eat, grow, survive</p>
+      <span class="best" id="snake-best"></span>
+    </div>
+    <div class="game-tile" data-game="memory">
+      <span class="icon">🧠</span>
+      <h3>Memory Match</h3>
+      <p>Flip cards and find all pairs</p>
+      <span class="best" id="memory-best"></span>
+    </div>
+    <div class="game-tile" data-game="ttt">
+      <span class="icon">❌</span>
+      <h3>Tic Tac Toe</h3>
+      <p>Beat the unbeatable AI</p>
+      <span class="best" id="ttt-best"></span>
+    </div>
+    <div class="game-tile" data-game="reaction">
+      <span class="icon">⚡</span>
+      <h3>Reaction Time</h3>
+      <p>Test your reflexes</p>
+      <span class="best" id="reaction-best"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SNAKE ===== -->
+<div class="game-screen" id="screen-snake">
+  <div class="game-header">
+    <button class="back-btn" data-back>← Back</button>
+    <h2>Snake</h2>
+    <span class="score-display" id="snake-score">Score: 0</span>
+  </div>
+  <div class="game-body">
+    <div>
+      <div class="snake-wrap">
+        <canvas id="snake-canvas" width="400" height="400"></canvas>
+        <div class="snake-overlay" id="snake-overlay">
+          <h3 id="snake-overlay-title">Snake</h3>
+          <p class="final-score" id="snake-final"></p>
+          <button class="play-btn" id="snake-start">Play</button>
+        </div>
+      </div>
+      <div class="touch-controls" id="snake-touch">
+        <span class="tc-blank"></span>
+        <button data-dir="up">▲</button>
+        <span class="tc-blank"></span>
+        <button data-dir="left">◀</button>
+        <span class="tc-blank"></span>
+        <button data-dir="right">▶</button>
+        <span class="tc-blank"></span>
+        <button data-dir="down">▼</button>
+        <span class="tc-blank"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MEMORY ===== -->
+<div class="game-screen" id="screen-memory">
+  <div class="game-header">
+    <button class="back-btn" data-back>← Back</button>
+    <h2>Memory Match</h2>
+    <span class="score-display" id="memory-score">Moves: 0</span>
+  </div>
+  <div class="game-body">
+    <div style="width:100%;max-width:440px">
+      <div class="memory-info">
+        <span>Pairs: <b id="memory-pairs">0 / 8</b></span>
+        <span>Moves: <b id="memory-moves">0</b></span>
+      </div>
+      <div class="memory-grid size-4" id="memory-grid"></div>
+      <div style="text-align:center;margin-top:16px">
+        <button class="play-btn" id="memory-reset" style="font-size:.8rem;padding:8px 20px">New Game</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TIC TAC TOE ===== -->
+<div class="game-screen" id="screen-ttt">
+  <div class="game-header">
+    <button class="back-btn" data-back>← Back</button>
+    <h2>Tic Tac Toe</h2>
+  </div>
+  <div class="game-body">
+    <div class="ttt-wrap">
+      <div class="ttt-scoreboard">
+        <span>You (X): <b id="ttt-wins">0</b></span>
+        <span>AI (O): <b id="ttt-losses">0</b></span>
+        <span>Draws: <b id="ttt-draws">0</b></span>
+      </div>
+      <div class="ttt-status" id="ttt-status">Your turn — you're X</div>
+      <div class="ttt-board" id="ttt-board"></div>
+      <button class="ttt-reset" id="ttt-reset">New Game</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== REACTION ===== -->
+<div class="game-screen" id="screen-reaction">
+  <div class="game-header">
+    <button class="back-btn" data-back>← Back</button>
+    <h2>Reaction Time</h2>
+  </div>
+  <div class="game-body">
+    <div>
+      <div class="reaction-box waiting" id="reaction-box">
+        <h3>Click to Start</h3>
+        <p>Test your reaction speed</p>
+      </div>
+      <div class="reaction-history" id="reaction-history"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =============================================
+   NAVIGATION
+============================================= */
+const hub = document.getElementById("hub");
+const tiles = document.querySelectorAll("[data-game]");
+const screens = document.querySelectorAll(".game-screen");
+const backBtns = document.querySelectorAll("[data-back]");
+
+function showGame(id) {
+  hub.style.display = "none";
+  screens.forEach(s => s.classList.remove("active"));
+  const screen = document.getElementById("screen-" + id);
+  if (screen) screen.classList.add("active");
+}
+function showHub() {
+  screens.forEach(s => s.classList.remove("active"));
+  hub.style.display = "flex";
+  updateBests();
+}
+tiles.forEach(t => t.addEventListener("click", () => {
+  showGame(t.dataset.game);
+  if (t.dataset.game === "snake") snakeReset();
+  if (t.dataset.game === "memory") memoryInit();
+  if (t.dataset.game === "ttt") tttInit();
+  if (t.dataset.game === "reaction") reactionReset();
+}));
+backBtns.forEach(b => b.addEventListener("click", () => {
+  snakeStop();
+  showHub();
+}));
+
+/* =============================================
+   BEST SCORES
+============================================= */
+function getBest(key) {
+  try { return localStorage.getItem("gh_" + key); } catch { return null; }
+}
+function setBest(key, val) {
+  try { localStorage.setItem("gh_" + key, val); } catch { /* noop */ }
+}
+function updateBests() {
+  const sb = getBest("snake");
+  const mb = getBest("memory");
+  const rb = getBest("reaction");
+  const tb = getBest("ttt_wins");
+  document.getElementById("snake-best").textContent = sb ? "Best: " + sb : "";
+  document.getElementById("memory-best").textContent = mb ? "Best: " + mb + " moves" : "";
+  document.getElementById("reaction-best").textContent = rb ? "Best: " + rb + "ms" : "";
+  document.getElementById("ttt-best").textContent = tb ? "Wins: " + tb : "";
+}
+updateBests();
+
+/* =============================================
+   SNAKE
+============================================= */
+const canvas = document.getElementById("snake-canvas");
+const ctx = canvas.getContext("2d");
+const overlay = document.getElementById("snake-overlay");
+const overlayTitle = document.getElementById("snake-overlay-title");
+const snakeFinal = document.getElementById("snake-final");
+const snakeScoreEl = document.getElementById("snake-score");
+const snakeStartBtn = document.getElementById("snake-start");
+
+const GRID = 20;
+const CELL = canvas.width / GRID;
+let snake, dir, nextDir, food, snakeScore, snakeLoop, snakeRunning;
+
+function snakeReset() {
+  snakeStop();
+  snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+  dir = {x:1,y:0}; nextDir = {x:1,y:0};
+  snakeScore = 0;
+  placeFood();
+  snakeDraw();
+  overlay.style.display = "flex";
+  overlayTitle.textContent = "Snake";
+  snakeFinal.textContent = "Use arrow keys or WASD";
+  snakeStartBtn.textContent = "Play";
+  snakeScoreEl.textContent = "Score: 0";
+}
+function snakeStop() {
+  if (snakeLoop) cancelAnimationFrame(snakeLoop);
+  snakeRunning = false;
+  snakeLoop = null;
+}
+function placeFood() {
+  let pos;
+  do {
+    pos = { x: Math.floor(Math.random() * GRID), y: Math.floor(Math.random() * GRID) };
+  } while (snake.some(s => s.x === pos.x && s.y === pos.y));
+  food = pos;
+}
+function snakeDraw() {
+  ctx.fillStyle = "#0d0d18";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // grid lines
+  ctx.strokeStyle = "rgba(255,255,255,.03)";
+  for (let i = 0; i <= GRID; i++) {
+    ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, canvas.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i * CELL); ctx.lineTo(canvas.width, i * CELL); ctx.stroke();
+  }
+  // food
+  ctx.fillStyle = "#e74c5c";
+  ctx.shadowColor = "#e74c5c"; ctx.shadowBlur = 10;
+  roundRect(ctx, food.x * CELL + 2, food.y * CELL + 2, CELL - 4, CELL - 4, 4);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  // snake
+  snake.forEach((s, i) => {
+    const t = 1 - i / snake.length;
+    ctx.fillStyle = `hsl(43, ${60 + t * 20}%, ${40 + t * 25}%)`;
+    if (i === 0) { ctx.shadowColor = "rgba(200,168,78,.4)"; ctx.shadowBlur = 8; }
+    roundRect(ctx, s.x * CELL + 1, s.y * CELL + 1, CELL - 2, CELL - 2, i === 0 ? 6 : 4);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+}
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+let lastTick = 0;
+const TICK_MS = 110;
+function snakeUpdate(time) {
+  if (!snakeRunning) return;
+  snakeLoop = requestAnimationFrame(snakeUpdate);
+  if (time - lastTick < TICK_MS) return;
+  lastTick = time;
+  dir = nextDir;
+  const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+  // wall collision
+  if (head.x < 0 || head.x >= GRID || head.y < 0 || head.y >= GRID) return snakeGameOver();
+  // self collision
+  if (snake.some(s => s.x === head.x && s.y === head.y)) return snakeGameOver();
+  snake.unshift(head);
+  if (head.x === food.x && head.y === food.y) {
+    snakeScore++;
+    snakeScoreEl.textContent = "Score: " + snakeScore;
+    placeFood();
+  } else {
+    snake.pop();
+  }
+  snakeDraw();
+}
+function snakeGameOver() {
+  snakeStop();
+  overlay.style.display = "flex";
+  overlayTitle.textContent = "Game Over";
+  snakeFinal.textContent = "Score: " + snakeScore;
+  snakeStartBtn.textContent = "Retry";
+  const best = getBest("snake");
+  if (!best || snakeScore > parseInt(best)) setBest("snake", snakeScore);
+}
+snakeStartBtn.addEventListener("click", () => {
+  snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+  dir = {x:1,y:0}; nextDir = {x:1,y:0};
+  snakeScore = 0;
+  snakeScoreEl.textContent = "Score: 0";
+  placeFood();
+  snakeDraw();
+  overlay.style.display = "none";
+  snakeRunning = true;
+  lastTick = 0;
+  snakeLoop = requestAnimationFrame(snakeUpdate);
+});
+document.addEventListener("keydown", e => {
+  if (!snakeRunning) return;
+  const map = {ArrowUp:{x:0,y:-1},ArrowDown:{x:0,y:1},ArrowLeft:{x:-1,y:0},ArrowRight:{x:1,y:0},
+               w:{x:0,y:-1},s:{x:0,y:1},a:{x:-1,y:0},d:{x:1,y:0},
+               W:{x:0,y:-1},S:{x:0,y:1},A:{x:-1,y:0},D:{x:1,y:0}};
+  const nd = map[e.key];
+  if (nd && (nd.x + dir.x !== 0 || nd.y + dir.y !== 0)) {
+    nextDir = nd;
+    e.preventDefault();
+  }
+});
+// touch
+document.getElementById("snake-touch").addEventListener("click", e => {
+  const btn = e.target.closest("[data-dir]");
+  if (!btn || !snakeRunning) return;
+  const map = {up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
+  const nd = map[btn.dataset.dir];
+  if (nd && (nd.x + dir.x !== 0 || nd.y + dir.y !== 0)) nextDir = nd;
+});
+// swipe
+let touchStart = null;
+canvas.addEventListener("touchstart", e => { touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
+canvas.addEventListener("touchend", e => {
+  if (!touchStart || !snakeRunning) return;
+  const dx = e.changedTouches[0].clientX - touchStart.x;
+  const dy = e.changedTouches[0].clientY - touchStart.y;
+  if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
+  let nd;
+  if (Math.abs(dx) > Math.abs(dy)) nd = dx > 0 ? {x:1,y:0} : {x:-1,y:0};
+  else nd = dy > 0 ? {x:0,y:1} : {x:0,y:-1};
+  if (nd.x + dir.x !== 0 || nd.y + dir.y !== 0) nextDir = nd;
+  touchStart = null;
+}, { passive: true });
+
+/* =============================================
+   MEMORY MATCH
+============================================= */
+const EMOJIS = ["🎮","🎯","🚀","💎","🔥","⚡","🌟","🎵","🎨","🧩","🏆","💡"];
+const memGrid = document.getElementById("memory-grid");
+const memPairsEl = document.getElementById("memory-pairs");
+const memMovesEl = document.getElementById("memory-moves");
+const memScoreEl = document.getElementById("memory-score");
+let memCards, memFlipped, memMatched, memMoves, memLocked;
+
+function memoryInit() {
+  const chosen = EMOJIS.slice(0, 8);
+  const deck = [...chosen, ...chosen];
+  // Fisher-Yates shuffle
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  memCards = deck;
+  memFlipped = [];
+  memMatched = new Set();
+  memMoves = 0;
+  memLocked = false;
+  memPairsEl.textContent = "0 / 8";
+  memMovesEl.textContent = "0";
+  memScoreEl.textContent = "Moves: 0";
+  renderMemory();
+}
+function renderMemory() {
+  memGrid.innerHTML = "";
+  memCards.forEach((emoji, i) => {
+    const card = document.createElement("div");
+    card.className = "memory-card" + (memMatched.has(i) ? " matched" : "") + (memFlipped.includes(i) ? " flipped" : "");
+    card.dataset.index = i;
+    card.innerHTML = `<div class="face front">?</div><div class="face back">${emoji}</div>`;
+    memGrid.appendChild(card);
+  });
+}
+memGrid.addEventListener("click", e => {
+  const card = e.target.closest(".memory-card");
+  if (!card || memLocked) return;
+  const idx = parseInt(card.dataset.index);
+  if (memFlipped.includes(idx) || memMatched.has(idx)) return;
+  memFlipped.push(idx);
+  card.classList.add("flipped");
+  if (memFlipped.length === 2) {
+    memMoves++;
+    memMovesEl.textContent = memMoves;
+    memScoreEl.textContent = "Moves: " + memMoves;
+    const [a, b] = memFlipped;
+    if (memCards[a] === memCards[b]) {
+      memMatched.add(a);
+      memMatched.add(b);
+      memFlipped = [];
+      memPairsEl.textContent = (memMatched.size / 2) + " / 8";
+      setTimeout(() => {
+        const cards = memGrid.querySelectorAll(".memory-card");
+        cards[a].classList.add("matched");
+        cards[b].classList.add("matched");
+        if (memMatched.size === memCards.length) {
+          const best = getBest("memory");
+          if (!best || memMoves < parseInt(best)) setBest("memory", memMoves);
+          memScoreEl.textContent = "Done in " + memMoves + " moves!";
+        }
+      }, 300);
+    } else {
+      memLocked = true;
+      setTimeout(() => {
+        const cards = memGrid.querySelectorAll(".memory-card");
+        cards[a].classList.remove("flipped");
+        cards[b].classList.remove("flipped");
+        memFlipped = [];
+        memLocked = false;
+      }, 700);
+    }
+  }
+});
+document.getElementById("memory-reset").addEventListener("click", memoryInit);
+
+/* =============================================
+   TIC TAC TOE (Minimax AI)
+============================================= */
+const tttBoard = document.getElementById("ttt-board");
+const tttStatus = document.getElementById("ttt-status");
+const tttWinsEl = document.getElementById("ttt-wins");
+const tttLossesEl = document.getElementById("ttt-losses");
+const tttDrawsEl = document.getElementById("ttt-draws");
+let tttCells, tttTurn, tttOver, tttRecord;
+
+function tttInit() {
+  tttCells = Array(9).fill(null);
+  tttTurn = "X";
+  tttOver = false;
+  tttRecord = tttRecord || { w: 0, l: 0, d: 0 };
+  tttStatus.textContent = "Your turn — you're X";
+  tttStatus.className = "ttt-status";
+  tttRender();
+  tttUpdateScoreboard();
+}
+function tttRender() {
+  tttBoard.innerHTML = "";
+  tttCells.forEach((val, i) => {
+    const cell = document.createElement("div");
+    cell.className = "ttt-cell" + (val ? " taken " + val.toLowerCase() : "");
+    cell.dataset.index = i;
+    cell.textContent = val || "";
+    tttBoard.appendChild(cell);
+  });
+}
+function tttUpdateScoreboard() {
+  tttWinsEl.textContent = tttRecord.w;
+  tttLossesEl.textContent = tttRecord.l;
+  tttDrawsEl.textContent = tttRecord.d;
+}
+const WINS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+function tttCheck(board) {
+  for (const [a, b, c] of WINS) {
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) return { winner: board[a], line: [a, b, c] };
+  }
+  if (board.every(c => c)) return { winner: "draw", line: [] };
+  return null;
+}
+function minimax(board, isMax, depth) {
+  const result = tttCheck(board);
+  if (result) {
+    if (result.winner === "O") return 10 - depth;
+    if (result.winner === "X") return depth - 10;
+    return 0;
+  }
+  if (isMax) {
+    let best = -Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (!board[i]) {
+        board[i] = "O";
+        best = Math.max(best, minimax(board, false, depth + 1));
+        board[i] = null;
+      }
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (!board[i]) {
+        board[i] = "X";
+        best = Math.min(best, minimax(board, true, depth + 1));
+        board[i] = null;
+      }
+    }
+    return best;
+  }
+}
+function aiMove() {
+  let bestScore = -Infinity, bestIdx = -1;
+  // Add slight randomness on first move for variety
+  const empty = tttCells.filter(c => !c).length;
+  if (empty === 8) {
+    // if center free take it, else random corner
+    if (!tttCells[4]) { bestIdx = 4; }
+    else { const corners = [0,2,6,8]; bestIdx = corners[Math.floor(Math.random() * 4)]; }
+  } else {
+    for (let i = 0; i < 9; i++) {
+      if (!tttCells[i]) {
+        tttCells[i] = "O";
+        const score = minimax(tttCells, false, 0);
+        tttCells[i] = null;
+        if (score > bestScore) { bestScore = score; bestIdx = i; }
+      }
+    }
+  }
+  if (bestIdx !== -1) {
+    tttCells[bestIdx] = "O";
+  }
+}
+tttBoard.addEventListener("click", e => {
+  const cell = e.target.closest(".ttt-cell");
+  if (!cell || tttOver || tttTurn !== "X") return;
+  const idx = parseInt(cell.dataset.index);
+  if (tttCells[idx]) return;
+  tttCells[idx] = "X";
+  tttRender();
+  let result = tttCheck(tttCells);
+  if (result) return tttEnd(result);
+  tttTurn = "O";
+  tttStatus.textContent = "AI is thinking…";
+  setTimeout(() => {
+    aiMove();
+    tttRender();
+    result = tttCheck(tttCells);
+    if (result) return tttEnd(result);
+    tttTurn = "X";
+    tttStatus.textContent = "Your turn";
+  }, 300);
+});
+function tttEnd(result) {
+  tttOver = true;
+  if (result.winner === "X") {
+    tttStatus.textContent = "You win!";
+    tttStatus.className = "ttt-status win";
+    tttRecord.w++;
+    setBest("ttt_wins", tttRecord.w);
+  } else if (result.winner === "O") {
+    tttStatus.textContent = "AI wins!";
+    tttStatus.className = "ttt-status lose";
+    tttRecord.l++;
+  } else {
+    tttStatus.textContent = "It's a draw!";
+    tttStatus.className = "ttt-status draw";
+    tttRecord.d++;
+  }
+  tttUpdateScoreboard();
+  // highlight winning cells
+  if (result.line.length) {
+    const cells = tttBoard.querySelectorAll(".ttt-cell");
+    result.line.forEach(i => cells[i].classList.add("win-cell"));
+  }
+}
+document.getElementById("ttt-reset").addEventListener("click", tttInit);
+
+/* =============================================
+   REACTION TIME
+============================================= */
+const rBox = document.getElementById("reaction-box");
+const rHistory = document.getElementById("reaction-history");
+let rState = "idle", rTimeout, rStart, rTimes = [];
+
+function reactionReset() {
+  rState = "idle";
+  rTimes = [];
+  rHistory.innerHTML = "";
+  rBox.className = "reaction-box waiting";
+  rBox.innerHTML = "<h3>Click to Start</h3><p>Test your reaction speed</p>";
+  if (rTimeout) clearTimeout(rTimeout);
+}
+rBox.addEventListener("click", () => {
+  if (rState === "idle") {
+    rState = "waiting";
+    rBox.className = "reaction-box ready";
+    rBox.innerHTML = "<h3>Wait for green…</h3><p>Click as fast as you can when it turns green</p>";
+    const delay = 1500 + Math.random() * 3500;
+    rTimeout = setTimeout(() => {
+      rState = "go";
+      rBox.className = "reaction-box go";
+      rBox.innerHTML = "<h3>CLICK NOW!</h3>";
+      rStart = performance.now();
+    }, delay);
+  } else if (rState === "waiting") {
+    // clicked too early
+    clearTimeout(rTimeout);
+    rState = "idle";
+    rBox.className = "reaction-box too-early";
+    rBox.innerHTML = "<h3>Too early!</h3><p>Click to try again</p>";
+  } else if (rState === "go") {
+    const time = Math.round(performance.now() - rStart);
+    rTimes.push(time);
+    rState = "idle";
+    rBox.className = "reaction-box result";
+    rBox.innerHTML = `<h3>Your Time</h3><div class="time">${time}<small>ms</small></div><p>Click to go again</p>`;
+    const span = document.createElement("span");
+    span.textContent = time + "ms";
+    rHistory.appendChild(span);
+    const best = getBest("reaction");
+    if (!best || time < parseInt(best)) setBest("reaction", time);
+  }
+});
+</script>
+</body>
+</html>

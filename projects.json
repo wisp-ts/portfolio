@@ -469,6 +469,53 @@
     }
   },
   {
+    "title": "Game Hub",
+    "slug": "game-hub",
+    "tag": "Web Game",
+    "description": "A collection of 4 polished browser mini-games — Snake, Memory Match, Tic Tac Toe (vs AI), and Reaction Time — all in a single self-contained page.",
+    "stack": ["HTML5 Canvas", "CSS3", "Vanilla JS", "Minimax AI"],
+    "links": [
+      { "label": "Live Demo", "url": "gamehub.html", "style": "primary", "preview": "gamehub.html" },
+      { "label": "View Project", "url": "project.html?slug=game-hub", "style": "secondary" }
+    ],
+    "docs": {
+      "hero": "4 polished mini-games in one self-contained HTML page — pick a game from the hub and play instantly.",
+      "readme": "# Game Hub\n\nA collection of classic mini-games built with vanilla HTML, CSS, and JavaScript.\n\n![Game Hub Preview](https://placehold.co/800x400/0a0a12/c8a84e?text=Game+Hub)\n\n## Games\n\n- **Snake** — Classic snake with smooth movement, score tracking, and swipe/touch controls\n- **Memory Match** — 16-card emoji matching game with flip animations and move counter\n- **Tic Tac Toe** — Play X against an unbeatable Minimax AI with win/loss/draw tracking\n- **Reaction Time** — Click-speed test with history log and personal best tracking\n\n## Features\n\n- Zero dependencies — single HTML file, fully self-contained\n- Dark themed UI consistent with the portfolio design\n- localStorage high scores across all games\n- Mobile-friendly with touch controls, swipe support, and responsive layouts\n- Runs inside an iframe (used by the portfolio's preview overlay system)\n\n> [!info] All games persist your best scores in localStorage so you can track your progress across sessions.",
+      "sections": [
+        {
+          "title": "Snake",
+          "badge": "Game",
+          "group": "Games",
+          "content": "Classic snake game rendered on an HTML5 Canvas.\n\n---\n\n### Controls\n\n| Input | Action |\n|-------|--------|\n| Arrow Keys | Move snake |\n| WASD | Move snake (alt) |\n| Swipe | Move snake (touch) |\n| D-Pad | On-screen controls (mobile) |\n\n---\n\n### Features\n\n- 20×20 grid with subtle gridlines\n- Gradient-colored snake body that fades toward the tail\n- Glowing head and food particles\n- Score counter in the header\n- Game-over overlay with retry button\n- 110ms tick speed for smooth, responsive gameplay"
+        },
+        {
+          "title": "Memory Match",
+          "badge": "Game",
+          "group": "Games",
+          "content": "Flip cards to find matching emoji pairs.\n\n---\n\n### How It Works\n\n1. 8 emoji pairs are shuffled into a 4×4 grid\n2. Click a card to flip it — then click a second\n3. If they match, both stay face-up and fade out\n4. If they don't match, both flip back after 700ms\n5. Find all 8 pairs to win\n\n---\n\n### Scoring\n\n- **Moves** — Counts every pair of flips\n- **Best** — Lowest move count saved to localStorage\n- The fewer moves, the better your score"
+        },
+        {
+          "title": "Tic Tac Toe",
+          "badge": "Game",
+          "group": "Games",
+          "content": "Play as X against a perfect Minimax AI.\n\n---\n\n### Minimax Algorithm\n\nThe AI evaluates every possible board state recursively:\n\n- It maximizes its own score (O) and minimizes yours (X)\n- Depth is factored in so the AI prefers faster wins\n- On its first move, it picks the center or a random corner for variety\n\n---\n\n### Scoreboard\n\nWins, losses, and draws are tracked per session. Win count is saved to localStorage.\n\n> [!warning] The AI plays perfectly — draws are the best you can achieve against it."
+        },
+        {
+          "title": "Reaction Time",
+          "badge": "Game",
+          "group": "Games",
+          "content": "Test how fast you can click when the box turns green.\n\n---\n\n### States\n\n| State | Color | Action |\n|-------|-------|--------|\n| Idle | Dark | Click to begin |\n| Waiting | Red | Wait for green |\n| Go | Green | Click immediately |\n| Too Early | Orange | Clicked before green |\n| Result | Gold border | Shows your time in ms |\n\n---\n\n### History\n\nEach attempt is logged as a pill below the box. Your fastest time is saved to localStorage."
+        },
+        {
+          "title": "Architecture",
+          "badge": "Technical",
+          "group": "Technical",
+          "content": "The entire game hub is a single self-contained HTML file.\n\n---\n\n### Structure\n\n| Section | Purpose |\n|---------|---------|\n| Hub screen | Game selection grid with best-score badges |\n| Game screens | Individual game UIs, shown/hidden via JS |\n| Navigation | Data-attribute routing with back buttons |\n| Storage | localStorage for personal bests |\n\n---\n\n### Design Decisions\n\n- **Single file** — No build step, no dependencies, instant load\n- **CSS custom properties** — Consistent dark theme matching the portfolio\n- **Canvas** — Used for Snake (smooth rendering); DOM for everything else\n- **Minimax** — Full recursive search for unbeatable Tic Tac Toe AI\n- **Responsive** — Grid collapses to single column on mobile, touch controls appear automatically"
+        }
+      ]
+    }
+  },
+  {
     "title": "More Work Coming",
     "slug": null,
     "tag": "In Progress",

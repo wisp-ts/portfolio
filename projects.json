@@ -1,52 +1,476 @@
-[
-  {
-    "title": "Forms+",
-    "tag": "Developer Tool",
-    "description": "A tool focused on building and designing MCBE forms with better structure, cleaner developer experience, and stronger presentation.",
-    "stack": ["JavaScript", "TypeScript", "Tooling"],
-    "links": [
-      { "label": "GitHub", "url": "https://github.com/wisp-ts/forms-plus", "style": "primary" }
+﻿[
+{
+  "title": "Forms+",
+  "slug": "forms-plus",
+  "tag": "Developer Tool",
+  "description": "A fully-typed, validated, and scalable form system for Minecraft Bedrock Script API with builders, presets, and structured error handling.",
+  "stack": ["TypeScript", "Minecraft Script API", "JavaScript", "UI Systems"],
+  "links": [
+    { "label": "Docs", "url": "https://wispts.xyz", "style": "primary" },
+    { "label": "Source", "url": "https://github.com/wispts", "style": "secondary" }
+  ],
+  "docs": {
+    "hero": "Forms+ is a fully-typed abstraction layer over @minecraft/server-ui that replaces fragile, unvalidated UI code with a structured system built around validation, retry handling, builders, and predictable execution.",
+    "readme": "# Forms+\n\nA production-ready UI system for Minecraft Bedrock Script API.\n\n---\n\n## What This Actually Solves\n\nVanilla forms are not reliable at scale.\n\n- They fail silently\n- They have no validation\n- They break with `UserBusy`\n- They require repetitive boilerplate\n\nForms+ fixes this by introducing a **controlled execution pipeline**.\n\n---\n\n## Core Idea\n\n```txt\nOptions → Validation → Build → Show → Response → Callbacks\n```\n\nEvery form goes through a predictable lifecycle.\n\n---\n\n## What You Get\n\n- Typed APIs (full inference)\n- Validation before execution\n- Retry handling for Bedrock issues\n- Structured error system\n- Builder pattern\n- Preset system.",
+    "sections": [
+      {
+        "title": "Getting Started",
+        "group": "Getting Started",
+        "content": "### Installation\n\nDrop the `FORMS` folder into your project's scripts directory:\n\n```txt\nscripts/\n└── API/\n    └── FORMS/\n        ├── forms.ts\n        ├── formTypes.ts\n        ├── formBuilder.ts\n        ├── formPresets.ts\n        ├── formErrors.ts\n        ├── text.ts\n        └── index.ts\n```\n\nThen re-export it from your API entry point:\n\n```ts\nexport * from \"./API/FORMS\";\n```\n\n---\n\n### Requirements\n\n| Dependency | Version |\n|-----------|--------|\n| `@minecraft/server` | v2.6.0 |\n| `@minecraft/server-ui` | v2.1.0 |\n| `TypeScript-Node` | v10.9.1 |\n| TypeScript |  v5.5.4 recommended |\n| Beta APIs | Must be enabled |\n\n> [!warning] Beta APIs must be enabled in your world settings or Forms+ will not function.\n\n---\n\n### First Form\n\n```ts\nimport { Forms } from \"./API/FORMS\";\n\nawait Forms.action(player, {\n  title: \"Hello World\",\n  body: \"Your first Forms+ form.\",\n  items: [\n    { kind: \"button\", text: \"Click Me\" }\n  ],\n  actions: [\n    (p) => p.sendMessage(\"It works!\")\n  ]\n});\n```\n\n> [!tip] Every form method is async — always `await` the result."
+      },
+      {
+        "title": "Configuration",
+        "group": "Getting Started",
+        "content": "Forms+ is globally configurable via `Forms.configure()`.\n\n```ts\nimport { Forms } from \"./API/FORMS\";\n\nForms.configure({\n  debug: true,\n  strict: true,\n  logWarnings: true,\n  logToChat: false,\n  chatTag: \"debug\",\n  prefix: \"[Forms+]\",\n  busyHandling: \"retry\",\n  maxBusyRetries: 500,\n  validateOnShow: true\n});\n```\n\n---\n\n### Full Options Reference\n\n| Option | Type | Default | Description |\n|--------|------|---------|------------|\n| `debug` | `boolean` | `false` | Enables validation logs to console |\n| `strict` | `boolean` | `true` | Throws errors on validation failure instead of failing silently |\n| `logWarnings` | `boolean` | `true` | Include warnings in debug output (not just errors) |\n| `logToChat` | `boolean` | `false` | Send debug logs to players with the debug tag |\n| `chatTag` | `string` | `\"debug\"` | Player tag required to receive in-chat debug logs |\n| `prefix` | `string` | `\"[Forms+]\"` | Prefix for all log/error messages |\n| `busyHandling` | `\"retry\"` \\| `\"none\"` | `\"retry\"` | How to handle `UserBusy` cancellation |\n| `maxBusyRetries` | `number` | `500` | Maximum retry attempts when `UserBusy` is hit |\n| `validateOnShow` | `boolean` | `true` | Run validation automatically before showing a form |\n\n---\n\n### Reading Config\n\n```ts\nconst config = Forms.getConfig();\nconsole.log(config.strict); // true\n```\n\n> [!info] `getConfig()` returns a copy — modifying the returned object does not change the internal config. Use `configure()` to update."
+      },
+      {
+        "title": "Action Forms",
+        "group": "API Reference",
+        "badge": "Core",
+        "content": "Action forms display a list of buttons, headers, labels, and dividers.\n\n```ts\nconst result = await Forms.action(player, options);\n```\n\n---\n\n### Options\n\n| Property | Type | Required | Description |\n|----------|------|----------|------------|\n| `title` | `FormText` | No | Form title |\n| `body` | `FormText` | No | Body text above items |\n| `items` | `ActionFormItem[]` | **Yes** | Buttons, headers, labels, dividers |\n| `actions` | `Function[]` | No | Callback per button index |\n| `onSelect` | `Function` | No | Global selection handler |\n\n---\n\n### Item Types\n\n| Kind | Properties | Description |\n|------|-----------|------------|\n| `button` | `text`, `iconPath?` | Clickable button |\n| `header` | `text` | Section header text |\n| `label` | `text` | Non-interactive label |\n| `divider` | — | Visual separator line |\n\n---\n\n### Full Example\n\n```ts\nawait Forms.action(player, {\n  title: \"Admin Panel\",\n  body: \"Select an action:\",\n  items: [\n    { kind: \"header\", text: \"Player Actions\" },\n    { kind: \"button\", text: \"Kick Player\", iconPath: \"textures/ui/cancel\" },\n    { kind: \"button\", text: \"Ban Player\" },\n    { kind: \"divider\" },\n    { kind: \"header\", text: \"Server\" },\n    { kind: \"button\", text: \"Restart\" },\n    { kind: \"label\", text: \"v2.1.0\" }\n  ],\n  actions: [\n    (p) => kickPlayer(p),\n    (p) => banPlayer(p),\n    (p) => restartServer()\n  ],\n  onSelect: (index, player) => {\n    player.sendMessage(`Selected option ${index}`);\n  }\n});\n```\n\n---\n\n### Handling the Result\n\n```ts\nconst result = await Forms.action(player, options);\n\nif (result.canceled) {\n  console.log(result.reason); // \"canceled\" | \"validation_failed\" | \"invalid_player\"\n  return;\n}\n\nconsole.log(result.data); // button index (number)\n```\n\n> [!info] Both `actions[]` and `onSelect` run during execution — `actions[i]` fires first, then `onSelect(i, player)`. The result is returned after all callbacks complete.\n\n> [!tip] `iconPath` accepts Minecraft texture paths like `\"textures/ui/cancel\"`. Leave it undefined for text-only buttons."
+      },
+      {
+        "title": "Message Forms",
+        "group": "API Reference",
+        "badge": "Core",
+        "content": "Message forms display a two-button confirmation dialog.\n\n```ts\nconst result = await Forms.message(player, options);\n```\n\n---\n\n### Options\n\n| Property | Type | Required | Description |\n|----------|------|----------|------------|\n| `title` | `FormText` | No | Dialog title |\n| `body` | `FormText` | No | Message body |\n| `button1` | `{ text: FormText }` | **Yes** | First button |\n| `button2` | `{ text: FormText }` | **Yes** | Second button |\n| `actions` | `[Function, Function]` | No | Callback tuple for each button |\n| `onSelect` | `Function` | No | Global handler receiving `0` or `1` |\n\n---\n\n### Basic Example\n\n```ts\nawait Forms.message(player, {\n  title: \"Delete World\",\n  body: \"Are you sure? This cannot be undone.\",\n  button1: { text: \"Delete\" },\n  button2: { text: \"Cancel\" },\n  actions: [\n    (p) => deleteWorld(p),\n    (p) => p.sendMessage(\"Cancelled.\")\n  ]\n});\n```\n\n---\n\n### Result Data\n\n| Value | Meaning |\n|-------|--------|\n| `0` | button1 was pressed |\n| `1` | button2 was pressed |\n\n```ts\nconst result = await Forms.message(player, options);\n\nif (!result.canceled) {\n  if (result.data === 0) {\n    // button1 pressed\n  } else {\n    // button2 pressed\n  }\n}\n```\n\n> [!warning] Validation requires both `button1` and `button2` to be defined. Omitting either will fail in strict mode."
+      },
+      {
+        "title": "Modal Forms",
+        "group": "API Reference",
+        "badge": "Core",
+        "content": "Modal forms display input controls and return typed values.\n\n```ts\nconst result = await Forms.modal(player, options);\n```\n\n---\n\n### Options\n\n| Property | Type | Required | Description |\n|----------|------|----------|------------|\n| `title` | `FormText` | No | Form title |\n| `submitButton` | `FormText` | No | Text on submit button |\n| `controls` | `ModalControl[]` | **Yes** | Input controls and layout elements |\n| `onSubmit` | `Function` | No | Called with all values on submit |\n| `actions` | `ModalActionMap` | No | Per-control callbacks |\n\n---\n\n### Control Types\n\n| Type | Output | Properties |\n|------|--------|------------|\n| `textField` | `string` | `label`, `placeholder?`, `defaultValue?`, `tooltip?` |\n| `slider` | `number` | `label`, `min`, `max`, `step?`, `defaultValue?`, `tooltip?` |\n| `toggle` | `boolean` | `label`, `defaultValue?`, `tooltip?` |\n| `dropdown` | `number` | `label`, `options[]`, `defaultValueIndex?`, `tooltip?` |\n| `header` | — | `text` (layout only, no value) |\n| `label` | — | `text` (layout only, no value) |\n| `divider` | — | (layout only, no value) |\n\n---\n\n### Full Example\n\n```ts\nconst result = await Forms.modal(player, {\n  title: \"Player Settings\",\n  submitButton: \"Save\",\n  controls: [\n    { type: \"header\", text: \"Display\" },\n    { type: \"textField\", label: \"Nickname\", placeholder: \"Enter name...\" },\n    { type: \"slider\", label: \"FOV\", min: 60, max: 120, step: 5, defaultValue: 90 },\n    { type: \"divider\" },\n    { type: \"header\", text: \"Gameplay\" },\n    { type: \"toggle\", label: \"PvP Enabled\", defaultValue: true },\n    { type: \"dropdown\", label: \"Difficulty\", options: [\"Easy\", \"Normal\", \"Hard\"], defaultValueIndex: 1 }\n  ],\n  onSubmit: (values, player) => {\n    // values is a typed tuple matching your controls\n    const [nickname, fov, pvp, difficulty] = values;\n    player.sendMessage(`Name: ${nickname}, FOV: ${fov}`);\n  }\n});\n```\n\n---\n\n### Per-Control Actions\n\nThe `actions` map lets you run callbacks for individual controls by index:\n\n```ts\nawait Forms.modal(player, {\n  title: \"Quick Settings\",\n  controls: [\n    { type: \"toggle\", label: \"Dark Mode\" },\n    { type: \"slider\", label: \"Volume\", min: 0, max: 100 }\n  ] as const,\n  actions: {\n    0: (value, allValues, player) => {\n      // value is boolean (from toggle)\n      player.sendMessage(`Dark mode: ${value}`);\n    },\n    1: (value, allValues, player) => {\n      // value is number (from slider)\n      setVolume(value);\n    }\n  }\n});\n```\n\n> [!tip] Use `as const` on your controls array for full type inference — TypeScript will infer the exact value types for each callback.\n\n> [!info] Layout controls (`header`, `label`, `divider`) don't produce values — they're skipped in the values tuple. Only input controls (`textField`, `slider`, `toggle`, `dropdown`) contribute to the output."
+      },
+      {
+        "title": "FormResult",
+        "group": "API Reference",
+        "content": "Every form method returns a `FormResult<T>` — a discriminated union that tells you whether the form was completed or canceled.\n\n### Type Definition\n\n```ts\ntype FormResult<T> =\n  | { canceled: true; reason: string; response?: unknown }\n  | { canceled: false; data: T; response?: unknown };\n```\n\n---\n\n### Return Values by Form Type\n\n| Form | `data` Type | Description |\n|------|-----------|------------|\n| `Forms.action()` | `number` | Selected button index |\n| `Forms.message()` | `0 \\| 1` | Which button was pressed |\n| `Forms.modal()` | `ModalValues<T>` | Typed tuple of all input values |\n\n---\n\n### Cancel Reasons\n\n| Reason | Meaning |\n|--------|--------|\n| `\"canceled\"` | Player closed the form |\n| `\"validation_failed\"` | Form failed validation |\n| `\"invalid_player\"` | Player reference was null or invalid |\n\n---\n\n### Pattern: Narrowing the Result\n\n```ts\nconst result = await Forms.action(player, form);\n\nif (result.canceled) {\n  // result.reason is available\n  // result.data does NOT exist here\n  return;\n}\n\n// TypeScript knows result.data exists here\nconst selectedIndex = result.data;\n```\n\n> [!tip] Always check `result.canceled` first — TypeScript will narrow the type automatically so you get full intellisense on `result.data`."
+      },
+      {
+        "title": "FormText & RawMessage",
+        "group": "API Reference",
+        "content": "Most text properties in Forms+ accept `FormText` — either a plain string or a Minecraft `RawMessage` object.\n\n### Type\n\n```ts\ntype FormText = string | RawMessage;\n```\n\n---\n\n### Using Strings\n\n```ts\n{ kind: \"button\", text: \"Click me\" }\n```\n\n---\n\n### Using RawMessage\n\nRawMessage enables Minecraft's translation system and dynamic text:\n\n```ts\n{ kind: \"button\", text: { rawtext: [{ text: \"Hello \" }, { selector: \"@s\" }] } }\n```\n\n```ts\n{ kind: \"button\", text: { translate: \"commands.tp.success\" } }\n```\n\n---\n\n### Validation\n\nForms+ validates text fields internally using `isFormText()` which checks for:\n\n- Plain strings\n- Objects with `rawtext`, `text`, `translate`, `with`, `score`, or `selector` properties\n\n> [!info] Invalid text values will trigger a validation error when `strict: true` — this catches common bugs like passing `undefined` or a number as button text."
+      },
+      {
+        "title": "Action Builder",
+        "group": "Builders",
+        "content": "The `ActionFormBuilder` provides a fluent API for constructing action forms.\n\n```ts\nimport { FormBuilder, Forms } from \"./API/FORMS\";\n\nconst form = FormBuilder.action()\n  .title(\"Main Menu\")\n  .body(\"Choose an option\")\n  .header(\"Actions\")\n  .button(\"Play\", (p) => startGame(p))\n  .button(\"Settings\", (p) => openSettings(p), \"textures/ui/settings\")\n  .divider()\n  .button(\"Quit\", (p) => p.sendMessage(\"Goodbye\"))\n  .build();\n\nawait Forms.action(player, form);\n```\n\n---\n\n### Available Methods\n\n| Method | Parameters | Description |\n|--------|-----------|------------|\n| `.title()` | `FormText` | Set form title |\n| `.body()` | `FormText` | Set body text |\n| `.button()` | `text`, `action?`, `iconPath?` | Add button with optional callback and icon |\n| `.header()` | `FormText` | Add header text |\n| `.label()` | `FormText` | Add label text |\n| `.divider()` | — | Add visual divider |\n| `.onSelect()` | `(index, player) => void` | Global selection handler |\n| `.build()` | — | Returns `ActionFormOptions` |\n\n---\n\n### Builder vs Direct\n\nBuilder syntax:\n\n```ts\nFormBuilder.action()\n  .title(\"Menu\")\n  .button(\"A\", handler)\n  .build();\n```\n\nDirect object:\n\n```ts\n{\n  title: \"Menu\",\n  items: [{ kind: \"button\", text: \"A\" }],\n  actions: [handler]\n}\n```\n\n> [!tip] The builder keeps actions tied to their buttons — no counting array indices. Use it when you have many buttons or complex layouts."
+      },
+      {
+        "title": "Message Builder",
+        "group": "Builders",
+        "content": "The `MessageFormBuilder` constructs two-button confirmation dialogs.\n\n```ts\nimport { FormBuilder, Forms } from \"./API/FORMS\";\n\nconst form = FormBuilder.message()\n  .title(\"Confirm Delete\")\n  .body(\"Permanently delete this item?\")\n  .button1(\"Delete\", (p) => deleteItem(p))\n  .button2(\"Cancel\")\n  .build();\n\nawait Forms.message(player, form);\n```\n\n---\n\n### Available Methods\n\n| Method | Parameters | Description |\n|--------|-----------|------------|\n| `.title()` | `FormText` | Set title |\n| `.body()` | `FormText` | Set body text |\n| `.button1()` | `text`, `action?` | First button with optional callback |\n| `.button2()` | `text`, `action?` | Second button with optional callback |\n| `.onSelect()` | `(index, player) => void` | Global handler |\n| `.build()` | — | Returns `MessageFormOptions` |\n\n> [!warning] Both `button1()` and `button2()` must be called before `.build()` — the builder will throw if either is missing."
+      },
+      {
+        "title": "Modal Builder",
+        "group": "Builders",
+        "content": "The `ModalFormBuilder` constructs input forms with full type tracking.\n\n```ts\nimport { FormBuilder, Forms } from \"./API/FORMS\";\n\nconst form = FormBuilder.modal()\n  .title(\"Create Warp\")\n  .submitButton(\"Create\")\n  .header(\"Warp Details\")\n  .textField(\"Name\", \"Enter warp name...\")\n  .textField(\"Description\", \"Optional...\", \"No description\")\n  .divider()\n  .header(\"Settings\")\n  .toggle(\"Public\", true)\n  .dropdown(\"Permission\", [\"Anyone\", \"Admins\", \"Owner\"], 0)\n  .slider(\"Cooldown (sec)\", 0, 60, 5, 10)\n  .onSubmit((values, player) => {\n    const [name, desc, isPublic, perm, cooldown] = values;\n    player.sendMessage(`Created warp: ${name}`);\n  })\n  .build();\n\nawait Forms.modal(player, form);\n```\n\n---\n\n### Available Methods\n\n| Method | Parameters | Description |\n|--------|-----------|------------|\n| `.title()` | `FormText` | Set title |\n| `.submitButton()` | `FormText` | Submit button text |\n| `.header()` | `FormText` | Layout header |\n| `.label()` | `FormText` | Layout label |\n| `.divider()` | — | Visual divider |\n| `.textField()` | `label`, `placeholder?`, `defaultValue?`, `tooltip?` | String input |\n| `.slider()` | `label`, `min`, `max`, `step?`, `defaultValue?`, `tooltip?` | Number slider |\n| `.toggle()` | `label`, `defaultValue?`, `tooltip?` | Boolean toggle |\n| `.dropdown()` | `label`, `options[]`, `defaultValueIndex?`, `tooltip?` | Dropdown select |\n| `.action()` | `index`, `handler` | Per-control callback |\n| `.onSubmit()` | `(values, player) => void` | Submit handler |\n| `.build()` | — | Returns `ModalFormOptions` |\n\n---\n\n### Type Tracking\n\nThe builder tracks control types as you chain methods. TypeScript knows the exact type of each value:\n\n```ts\nFormBuilder.modal()\n  .textField(\"Name\")      // index 0 → string\n  .toggle(\"Enabled\")       // index 1 → boolean\n  .slider(\"Volume\", 0, 100) // index 2 → number\n  .onSubmit((values) => {\n    // values[0] is string\n    // values[1] is boolean\n    // values[2] is number\n  })\n  .build();\n```\n\n> [!info] Layout controls (`header`, `label`, `divider`) don't affect the values tuple — only input controls contribute typed values."
+      },
+      {
+        "title": "Presets",
+        "group": "System",
+        "content": "The `FormPresets` class provides factory methods for common form patterns.\n\n```ts\nimport { FormPresets, Forms } from \"./API/FORMS\";\n```\n\n---\n\n### Available Presets\n\n| Preset | Returns | Description |\n|--------|---------|------------|\n| `confirm()` | `MessageFormOptions` | Yes/No confirmation dialog |\n| `dangerConfirm()` | `MessageFormOptions` | Destructive action confirmation |\n| `ok()` | `ActionFormOptions` | Single-button notice |\n| `error()` | `ActionFormOptions` | Error message with Close button |\n| `success()` | `ActionFormOptions` | Success message with Nice button |\n| `loading()` | `ActionFormOptions` | Loading indicator with label |\n\n---\n\n### Signatures\n\n```ts\nFormPresets.confirm(title?, body?, yes?, no?)\nFormPresets.dangerConfirm(body?, title?)\nFormPresets.ok(title?, body?, button?)\nFormPresets.error(body?, title?)\nFormPresets.success(body?, title?)\nFormPresets.loading(title?, body?)\n```\n\n---\n\n### Usage Examples\n\n```ts\n// Quick confirmation\nawait Forms.message(player, FormPresets.confirm());\n\n// Custom confirm\nawait Forms.message(player, \n  FormPresets.confirm(\"Save?\", \"Save your progress?\", \"Save\", \"Don't Save\")\n);\n\n// Danger confirmation\nawait Forms.message(player,\n  FormPresets.dangerConfirm(\"This will delete all warps.\")\n);\n\n// Error display\nawait Forms.action(player, \n  FormPresets.error(\"Failed to connect to server.\")\n);\n\n// Success display\nawait Forms.action(player, \n  FormPresets.success(\"Warp created successfully!\")\n);\n```\n\n> [!tip] All preset parameters have sensible defaults — call them with no arguments for the standard behavior, or customize any parameter."
+      },
+      {
+        "title": "Validation",
+        "group": "System",
+        "content": "Forms+ validates every form before display when `validateOnShow` is enabled (default: `true`).\n\n---\n\n### What Gets Validated\n\n#### Action Forms\n\n| Check | Severity | Condition |\n|-------|----------|----------|\n| Options is object | Error | `null` or non-object |\n| Title is valid | Error | Not a string or RawMessage |\n| Body is valid | Error | Not a string or RawMessage |\n| Has items | Error | Empty or not an array |\n| Has buttons | Error | No items with `kind: \"button\"` |\n| Button text valid | Error | Invalid text on any button |\n| Actions match | Warning | `actions.length` ≠ button count |\n\n#### Message Forms\n\n| Check | Severity | Condition |\n|-------|----------|----------|\n| button1 exists | Error | Missing |\n| button2 exists | Error | Missing |\n\n#### Modal Forms\n\n| Check | Severity | Condition |\n|-------|----------|----------|\n| Controls is array | Error | Not an array |\n\n#### Player\n\n| Check | Severity | Condition |\n|-------|----------|----------|\n| Player exists | Error | `null` or `undefined` |\n| Player is valid | Error | `player.isValid` is false |\n\n---\n\n### Manual Validation\n\nYou can validate forms without showing them:\n\n```ts\nconst result = Forms.validateActionForm(options);\nconst result = Forms.validateMessageForm(options);\nconst result = Forms.validateModalForm(options);\n```\n\n---\n\n### ValidationResult\n\n```ts\n{\n  valid: boolean,       // true if no errors\n  errors: FormIssue[],  // severity: \"error\"\n  warnings: FormIssue[], // severity: \"warning\"\n  issues: FormIssue[]   // all issues combined\n}\n```\n\nEach `FormIssue` contains:\n\n```ts\n{ level: \"error\" | \"warning\", path: string, message: string }\n```\n\n> [!info] When `strict: true`, validation errors throw a `ValidationError`. When `strict: false`, the form simply returns `{ canceled: true, reason: \"validation_failed\" }` without throwing."
+      },
+      {
+        "title": "Error Handling",
+        "group": "System",
+        "content": "Forms+ uses a structured error hierarchy.\n\n---\n\n### Error Classes\n\nAll errors extend `FormsError`, which extends `Error`.\n\n| Class | Code | When |\n|-------|------|------|\n| `FormsError` | `FORMS_ERROR` | Base error class |\n| `InvalidPlayerError` | `INVALID_PLAYER` | Player is null, undefined, or invalid |\n| `ValidationError` | `VALIDATION_ERROR` | Form options failed validation (strict mode) |\n| `FormDisplayError` | `FORM_DISPLAY_ERROR` | Max retries exceeded |\n| `FormCallbackError` | `FORM_CALLBACK_ERROR` | Exception thrown inside a callback |\n\n---\n\n### Error Properties\n\nEvery `FormsError` includes:\n\n```ts\n{\n  name: string,     // e.g. \"ValidationError\"\n  message: string,  // human-readable description\n  code: string,     // machine-readable code\n  details?: unknown // additional context (e.g. ValidationResult)\n}\n```\n\n---\n\n### Catching Errors\n\n```ts\nimport { FormsError, ValidationError, FormCallbackError } from \"./API/FORMS\";\n\ntry {\n  await Forms.action(player, options);\n} catch (e) {\n  if (e instanceof ValidationError) {\n    console.warn(\"Validation:\", e.details);\n  } else if (e instanceof FormCallbackError) {\n    console.warn(\"Callback crashed:\", e.details);\n  } else if (e instanceof FormsError) {\n    console.warn(`[${e.code}] ${e.message}`);\n  }\n}\n```\n\n---\n\n### Safe Callbacks\n\nForms+ wraps all user callbacks (actions, onSelect, onSubmit) in a `safe()` wrapper. If your callback throws, it's caught and re-thrown as a `FormCallbackError` with the original error in `details`.\n\n> [!warning] In strict mode, invalid forms throw `ValidationError` immediately — the form is never shown. In non-strict mode, no error is thrown; the result simply returns `{ canceled: true, reason: \"validation_failed\" }`."
+      },
+      {
+        "title": "Retry System",
+        "group": "System",
+        "content": "Minecraft Bedrock randomly returns `UserBusy` when the player's UI state conflicts with form display. Forms+ handles this automatically.\n\n---\n\n### How It Works\n\n1. Form is shown via `system.run()` → `form.show(player)`\n2. If the response has `cancelationReason === \"UserBusy\"`, the form is retried\n3. Retries continue until success or `maxBusyRetries` is reached\n4. If all retries fail, a `FormDisplayError` is thrown\n\n---\n\n### Configuration\n\n```ts\nForms.configure({\n  busyHandling: \"retry\",   // \"retry\" or \"none\"\n  maxBusyRetries: 500       // attempts before giving up\n});\n```\n\n---\n\n### Modes\n\n| Mode | Behavior |\n|------|----------|\n| `\"retry\"` | Automatically retry on `UserBusy` up to `maxBusyRetries` times |\n| `\"none\"` | No retries — `UserBusy` is treated as a regular cancellation |\n\n---\n\n### Why This Matters\n\nWithout retry handling, common scenarios break forms:\n\n- Player opens inventory simultaneously\n- NPC dialog overlaps with form\n- Multiple scripts try to show forms in the same tick\n- Player is in a transition state (loading, teleporting)\n\n> [!tip] The default `maxBusyRetries: 500` is intentionally high. Each retry is near-instant — 500 retries typically resolve within milliseconds. Set to `0` only if you want to disable retries completely."
+      },
+      {
+        "title": "Debug System",
+        "group": "System",
+        "content": "Forms+ includes a debug logging system for development.\n\n---\n\n### Enabling Debug\n\n```ts\nForms.configure({\n  debug: true,\n  logWarnings: true\n});\n```\n\n---\n\n### Output Format\n\n```txt\n[Forms+] ActionForm\nERROR | items | At least one item required.\nWARNING | actions | Actions length does not match buttons.\n```\n\n---\n\n### In-Game Chat Logging\n\nSend debug logs directly to players:\n\n```ts\nForms.configure({\n  debug: true,\n  logToChat: true,\n  chatTag: \"debug\"\n});\n```\n\nOnly players with the specified tag receive messages:\n\n```txt\n/tag @s add debug\n```\n\n---\n\n### Customizing the Prefix\n\n```ts\nForms.configure({\n  prefix: \"[MyAddon]\"\n});\n```\n\n> [!tip] Use `logToChat` during development to see validation issues in real-time without checking console logs."
+      },
+      {
+        "title": "Type Reference",
+        "group": "Reference",
+        "badge": "TypeScript",
+        "content": "Complete type definitions exported from Forms+.\n\n---\n\n### Core Types\n\n| Type | Description |\n|------|------------|\n| `FormText` | `string \\| RawMessage` |\n| `MaybePromise<T>` | `T \\| Promise<T>` — allows sync or async callbacks |\n| `FormCancelReason` | `\"UserBusy\" \\| \"UserClosed\" \\| \"unknown\" \\| string` |\n| `BusyHandlingMode` | `\"none\" \\| \"retry\"` |\n\n---\n\n### Result Types\n\n| Type | Description |\n|------|------------|\n| `FormResult<T>` | Discriminated union — `canceled: true` with reason, or `canceled: false` with data |\n| `FormIssue` | `{ level, path, message }` |\n| `ValidationResult` | `{ valid, errors[], warnings[], issues[] }` |\n\n---\n\n### Action Form Types\n\n| Type | Description |\n|------|------------|\n| `ActionFormButton` | `{ kind: \"button\", text, iconPath? }` |\n| `ActionFormHeader` | `{ kind: \"header\", text }` |\n| `ActionFormLabel` | `{ kind: \"label\", text }` |\n| `ActionFormDivider` | `{ kind: \"divider\" }` |\n| `ActionFormItem` | Union of all four |\n| `ActionFormOptions` | Full action form config |\n\n---\n\n### Message Form Types\n\n| Type | Description |\n|------|------------|\n| `MessageFormButton` | `{ text: FormText }` |\n| `MessageFormOptions` | Full message form config |\n\n---\n\n### Modal Form Types\n\n| Type | Description |\n|------|------------|\n| `ModalTextField` | Text input control |\n| `ModalSlider` | Number slider control |\n| `ModalToggle` | Boolean toggle control |\n| `ModalDropdown` | Dropdown selection control |\n| `ModalHeader` | Layout-only header |\n| `ModalLabel` | Layout-only label |\n| `ModalDivider` | Layout-only divider |\n| `ModalControl` | Union of all control types |\n| `ModalInputControl` | Controls that produce values (excludes header/label/divider) |\n| `ModalValue<T>` | Maps a control type to its output type |\n| `ModalValues<T>` | Mapped tuple of all control values |\n| `ModalActionMap<T>` | Per-index callback map |\n| `ModalFormOptions<T>` | Full modal form config |\n\n---\n\n### Config Types\n\n| Type | Description |\n|------|------------|\n| `FormsConfig` | Configuration options for `Forms.configure()` |\n| `FormIssueLevel` | `\"error\" \\| \"warning\"` |"
+      },
+      {
+        "title": "Architecture",
+        "group": "Reference",
+        "content": "### File Structure\n\n| File | Responsibility |\n|------|---------------|\n| `forms.ts` | Core engine — `Forms` class with `action()`, `message()`, `modal()`, validation, config, retry, debug |\n| `formTypes.ts` | Complete type system — all types, interfaces, generics, and mapped types |\n| `formBuilder.ts` | Fluent builders — `ActionFormBuilder`, `MessageFormBuilder`, `ModalFormBuilder`, `FormBuilder` factory |\n| `formPresets.ts` | `FormPresets` class — `confirm`, `dangerConfirm`, `ok`, `error`, `success`, `loading` |\n| `formErrors.ts` | Error hierarchy — `FormsError`, `InvalidPlayerError`, `ValidationError`, `FormDisplayError`, `FormCallbackError` |\n| `text.ts` | Text validation — `isRawMessage()`, `isFormText()` |\n| `index.ts` | Barrel exports |\n\n---\n\n### Design Principles\n\n- **Validation-first** — Every form is validated before display\n- **Safe execution** — All callbacks are wrapped to prevent unhandled crashes\n- **Type inference** — Generic constraints propagate types through the full pipeline\n- **Separation of concerns** — Types, logic, builders, presets, and errors are fully decoupled\n- **Zero dependencies** — Only uses `@minecraft/server` and `@minecraft/server-ui`\n\n---\n\n### Execution Internals\n\n```txt\nForms.action(player, options)\n  → validatePlayer(player)\n  → validateActionForm(options)\n  → new ActionFormData() + populate\n  → showWithRetry(showForm(form, player))\n  → safe(() => actions[i]?.(player))\n  → safe(() => onSelect?.(i, player))\n  → return FormResult<number>\n```\n\n> [!info] `system.run()` is used internally to ensure form display happens on the correct game tick. This is a Bedrock requirement — showing forms outside `system.run()` causes undefined behavior."
+      },
+      {
+        "title": "Recipes & Patterns",
+        "group": "Reference",
+        "content": "### Multi-Page Menu\n\n```ts\nasync function mainMenu(player: Player) {\n  await Forms.action(player, {\n    title: \"Main Menu\",\n    items: [\n      { kind: \"button\", text: \"Settings\" },\n      { kind: \"button\", text: \"Warps\" },\n      { kind: \"button\", text: \"Help\" }\n    ],\n    actions: [\n      (p) => settingsMenu(p),\n      (p) => warpsMenu(p),\n      (p) => helpMenu(p)\n    ]\n  });\n}\n```\n\n---\n\n### Confirm Before Action\n\n```ts\nconst result = await Forms.message(player,\n  FormPresets.dangerConfirm(\"Delete all warps?\")\n);\n\nif (!result.canceled && result.data === 0) {\n  deleteAllWarps();\n}\n```\n\n---\n\n### Settings Form with Defaults\n\n```ts\nfunction settingsForm(current: { name: string; volume: number; pvp: boolean }) {\n  return FormBuilder.modal()\n    .title(\"Settings\")\n    .textField(\"Name\", \"Enter name\", current.name)\n    .slider(\"Volume\", 0, 100, 5, current.volume)\n    .toggle(\"PvP\", current.pvp)\n    .onSubmit((values, player) => {\n      const [name, volume, pvp] = values;\n      saveSettings(player, { name, volume, pvp });\n    })\n    .build();\n}\n```\n\n---\n\n### Error-Safe Form Chain\n\n```ts\ntry {\n  const r1 = await Forms.action(player, menuForm);\n  if (r1.canceled) return;\n\n  const r2 = await Forms.message(player, confirmForm);\n  if (r2.canceled || r2.data !== 0) return;\n\n  const r3 = await Forms.modal(player, inputForm);\n  if (r3.canceled) return;\n\n  processData(r3.data);\n} catch (e) {\n  await Forms.action(player, FormPresets.error(\"Something went wrong.\"));\n}\n```\n\n---\n\n### Dynamic Button List\n\n```ts\nconst players = world.getAllPlayers();\n\nawait Forms.action(player, {\n  title: \"Select Player\",\n  items: players.map(p => ({ kind: \"button\" as const, text: p.name })),\n  onSelect: (index, player) => {\n    const target = players[index];\n    player.sendMessage(`Selected: ${target.name}`);\n  }\n});\n```\n\n> [!tip] These patterns cover the most common real-world use cases. Combine them to build complex multi-step UI flows."
+      }
     ]
-  },
-  {
-    "title": "Portfolio Site",
-    "tag": "Website",
-    "description": "A multi-page personal portfolio focused on stronger layout, theme customization, responsive behavior, accessibility improvements, and polished presentation.",
-    "stack": ["HTML", "CSS", "JavaScript"],
-    "links": [
-      { "label": "Live Site", "url": "https://wispts.xyz", "style": "primary", "preview": "https://wispts.xyz" },
-      { "label": "GitHub", "url": "https://github.com/wisp-ts/portfolio", "style": "secondary" }
+  }
+},
+{
+  "title": "Portfolio Site",
+  "slug": "portfolio-site",
+  "tag": "Website",
+  "description": "A data-driven portfolio with a built-in documentation engine, 11 themes, interactive particle background, custom settings system, and a Markdown-like content renderer — all in pure HTML, CSS, and JavaScript.",
+  "stack": ["HTML", "CSS", "JavaScript", "JSON"],
+  "links": [
+    { "label": "Live Site", "url": "https://wispts.xyz", "style": "primary", "preview": "https://wispts.xyz" },
+    { "label": "GitHub", "url": "https://github.com/wisp-ts/portfolio", "style": "secondary" }
+  ],
+  "docs": {
+    "hero": "A custom-built portfolio system that combines a project showcase with a full documentation engine, 11 switchable themes, interactive canvas effects, and a settings panel with persistent user preferences — all driven by a single JSON file with zero dependencies.",
+
+    "readme": "# Portfolio System\n\nA data-driven portfolio with a built-in documentation engine.\n\n---\n\n## What This Is\n\nNot a static portfolio. It's a **content system + rendering engine** built with pure HTML, CSS, and JavaScript.\n\nAll projects, docs, readmes, downloads, and images come from one JSON file. The rendering layer parses structured data into fully interactive pages — no frameworks, no build tools.\n\n---\n\n## Architecture\n\n```txt\nprojects.json → script.js → HTML/CSS → Interactive UI\n```\n\nEvery page reads from `projects.json` and renders dynamically. Add a project, write docs, define downloads — all without touching HTML.\n\n---\n\n## Core Features\n\n- **Data-Driven Content** — All projects live in `projects.json`, rendered by JS\n- **Documentation Engine** — Markdown-like parser with callouts, tables, code blocks, kbd keys, images\n- **11 Themes** — Dark Gold, Light, Midnight, Emerald, Rose, Sunset, Arctic, Lavender, Cherry, Ocean, Mono\n- **Settings Panel** — Theme, surface, font, animation level, border radius — persisted via localStorage\n- **Interactive Background** — Canvas particle system with mouse interaction\n- **Cursor Glow** — Lerp-smoothed glow that follows the mouse\n- **Card Tilt** — CSS variable-driven 3D tilt on hover with radial glow\n- **Preview Overlay** — Sandboxed iframe preview for live project demos\n- **Scroll-Spy Sidebar** — IntersectionObserver-based active section tracking\n- **Page Transitions** — Smooth opacity fade between pages\n- **Responsive** — Full mobile support with hamburger nav and collapsible docs\n\n---\n\n## Pages\n\n| Page | Purpose |\n|------|---------|\n| Home | Hero, work ethic, skills, featured cards, CTA |\n| Portfolio | Project grid from JSON with live preview overlay |\n| Project | Dynamic detail page: hero, readme, downloads, docs sidebar |\n| About | Background, timeline, learning goals |\n| Contact | Info, availability, socials with SVG icons |\n\n---\n\n## Tech Stack\n\n| Layer | Technology |\n|-------|------------|\n| Markup | HTML5 with Open Graph, JSON-LD, ARIA |\n| Styling | CSS3 (~3,100 lines) with custom properties, grid, glassmorphism |\n| Logic | Vanilla JS (~1,200 lines) with no dependencies |\n| Data | JSON (projects, docs, readmes, downloads, images) |\n| Storage | localStorage for settings persistence |\n\n> [!info] Zero dependencies. No frameworks, no build tools, no CDN libraries. Everything is vanilla HTML, CSS, and JavaScript.",
+
+    "downloads": [
+      { "label": "Source Code", "url": "https://github.com/wisp-ts/portfolio", "type": ".zip" }
+    ],
+    "images": [],
+
+    "sections": [
+      {
+        "title": "Overview",
+        "group": "Getting Started",
+        "content": "The portfolio system is built around a single data file — `projects.json` — that drives all project pages, documentation, readmes, downloads, and gallery images.\n\n---\n\n### File Structure\n\n```txt\nindex.html         — Home page\nportfolio.html     — Project grid\nproject.html       — Dynamic project detail page\nabout.html         — About page\ncontact.html       — Contact page\nscript.js          — All logic (~1,200 lines)\nstyles.css         — All styling (~3,100 lines)\nprojects.json      — Content data source\n```\n\n---\n\n### How It Works\n\n1. Every page shares the same `script.js` and `styles.css`\n2. `projects.json` defines all projects, docs sections, readmes, downloads, and images\n3. The portfolio page reads JSON and renders a card grid\n4. The project detail page reads `?p=slug` from the URL and renders the matching project\n5. Settings are persisted to localStorage and applied on every page load\n\n---\n\n### Shared Elements\n\nEvery page includes:\n\n- Sticky navbar with logo, nav links, Discord link, and hamburger toggle\n- Two animated background orbs (`.bg-orb`)\n- Canvas particle background\n- Cursor glow effect\n- Settings FAB + panel\n- Back-to-top button\n- Footer"
+      },
+
+      {
+        "title": "Project Data Format",
+        "group": "Getting Started",
+        "content": "Each project in `projects.json` follows this structure:\n\n```js\n{\n  title: \"Project Name\",\n  slug: \"project-slug\",       // URL param for detail page\n  tag: \"Website\",             // Category label\n  description: \"Short desc\",\n  stack: [\"JS\", \"CSS\"],       // Tech stack pills\n  links: [\n    { label: \"Live\", url: \"...\", style: \"primary\", preview: \"...\" },\n    { label: \"GitHub\", url: \"...\", style: \"secondary\" }\n  ],\n  docs: {\n    hero: \"Hero description\",\n    readme: \"# Markdown readme content\",\n    downloads: [\n      { label: \"Source\", url: \"...\", type: \".zip\" }\n    ],\n    images: [\n      { url: \"...\", alt: \"...\", caption: \"...\" }\n    ],\n    sections: [\n      { title: \"Section\", group: \"Group\", badge: \"Tag\", content: \"Markdown\" }\n    ]\n  }\n}\n```\n\n---\n\n### Link Styles\n\n| Style | Rendering |\n|-------|----------|\n| `primary` | Accent gradient button |\n| `secondary` | Transparent bordered button |\n\nIf a link has a `preview` property, clicking it opens the sandboxed iframe overlay instead of navigating away.\n\n---\n\n### Download Types\n\n| Type | Icon |\n|------|------|\n| `.zip` | 📦 |\n| `.mcaddon` | 🧩 |\n| `.mcpack` | 🧩 |\n| `source` | 📄 |\n| Other | 📥 |"
+      },
+
+      {
+        "title": "Documentation Engine",
+        "group": "Rendering",
+        "badge": "Core",
+        "content": "The documentation engine is a custom Markdown-like parser built into `formatDocContent()`. It processes structured text into styled HTML for project docs and readmes.\n\n---\n\n### Processing Pipeline\n\n```txt\nRaw Text → Split by Code Blocks → Process Paragraphs → Apply Inline Formatting → HTML Output\n```\n\n1. Text is split by triple-backtick fences (preserving language labels)\n2. Each non-code segment is split into paragraphs by blank lines\n3. Each paragraph is matched against block-level syntax rules\n4. All text runs through `inlineFormat()` for inline styling\n\n---\n\n### Block-Level Syntax\n\n| Syntax | Output | CSS Class |\n|--------|--------|-----------|\n| ```` ```lang ``` ```` | Code block with lang label + copy button | `.code-block-wrapper` |\n| `---` | Horizontal divider | `.doc-divider` |\n| `![alt](url)` (standalone) | Figure with image + caption | `.doc-inline-image` |\n| `> [!type] text` | Callout box (info, warning, tip, note) | `.doc-callout` |\n| `> text` | Blockquote | `.doc-blockquote` |\n| `\\| col \\| col \\|` | Table with header row | `.doc-table` |\n| `# Heading` | H1 heading | `.doc-heading-lg` |\n| `## Heading` | H2 heading | `.doc-heading` |\n| `### Heading` | H3 subheading | `.doc-subheading` |\n| `#### Heading` | H4 subheading | `.doc-subheading-sm` |\n| `1. item` | Ordered list | `<ol>` |\n| `- item` | Unordered list | `<ul>` |\n\n---\n\n### Inline Syntax\n\n| Syntax | Output |\n|--------|--------|\n| `**bold**` | `<strong>` |\n| `*italic*` | `<em>` |\n| `` `code` `` | `<code>` |\n| `[[Key]]` | `<kbd>` keyboard key |\n| `![alt](url)` (inline) | Inline image |\n| `[text](url)` | Link (opens in new tab) |\n| `~~struck~~` | Strikethrough |\n\n---\n\n### Callout Types\n\n| Type | Icon | Color |\n|------|------|-------|\n| `info` | ℹ | Blue (`#6490ff`) |\n| `warning` | ⚠ | Yellow (`#ffc83c`) |\n| `tip` | 💡 | Green (`#5ce8a0`) |\n| `note` | 📝 | Purple (`#b08aff`) |\n\n---\n\n### Code Blocks\n\nFenced code blocks render inside a `.code-block-wrapper` with:\n\n- **Language label** — top-left corner (e.g. `js`, `txt`, `ts`)\n- **Copy button** — top-right corner, copies code to clipboard"
+      },
+
+      {
+        "title": "Project Detail Page",
+        "group": "Rendering",
+        "content": "The project detail page (`project.html`) renders dynamically based on the `?p=slug` URL parameter.\n\n---\n\n### Page Structure\n\n```txt\nDoc Progress Bar (fixed top)\n    ↓\nProject Hero (tag, title, description, stack, links)\n    ↓\nREADME + Downloads Layout (2-column grid)\n    ↓\nDocs Layout (sidebar + main content)\n    ↓\nGallery (if images exist)\n```\n\n---\n\n### Doc Progress Bar\n\nA thin accent-colored bar fixed to the top of the viewport. Width scales from 0% to 100% based on scroll position using `transform: scaleX()`.\n\n---\n\n### README Section\n\nIf the project has a `readme` field, it renders above the docs using `formatDocContent()`. The readme body appears in a bordered card on the left.\n\n---\n\n### Download Sidebar\n\nIf the project has `downloads`, a sticky sidebar appears on the right (280px). Each download button shows an icon based on file type, plus the label and type metadata.\n\nOn mobile (≤768px), the sidebar moves above the readme as a stacked layout.\n\n---\n\n### Docs Sidebar\n\nSections are grouped by their `group` property. Each group becomes a collapsible section in the sidebar with a chevron toggle. Sections without a group appear at the top level.\n\n---\n\n### Scroll-Spy\n\nAn `IntersectionObserver` with `rootMargin: \"-20% 0px -60% 0px\"` watches each doc section. When a section enters the viewport:\n\n1. Its sidebar link gets the `.active` class\n2. Its parent group auto-expands if collapsed\n3. Previous active links are deactivated\n\n---\n\n### Hash Navigation\n\nIf the URL contains a `#hash`, the page auto-scrolls to the matching section after a 300ms delay (waiting for content to render)."
+      },
+
+      {
+        "title": "Portfolio Grid",
+        "group": "Rendering",
+        "content": "The portfolio page (`portfolio.html`) renders a grid of project cards from `projects.json`.\n\n---\n\n### How It Works\n\n1. Fetches `projects.json`\n2. Iterates each project and creates a `.card.project-card.reveal` article\n3. Each card contains:\n   - Tag label + title\n   - Description text\n   - Stack pills (tech tags)\n   - Link buttons (primary/secondary)\n4. Cards are observed by the reveal system for scroll-triggered animation\n\n---\n\n### Card Rendering\n\n| Element | Content |\n|---------|---------|\n| `.project-top` | Tag pill + project title |\n| Description | `<p>` with project description |\n| `.project-stack` | `<span>` pills for each stack item |\n| `.project-links` | Buttons from `links[]` array |\n\n---\n\n### Preview Overlay\n\nLinks with a `preview` property open a sandboxed iframe overlay instead of navigating away. The overlay includes:\n\n- Title bar with project name and close button\n- Sandboxed iframe (`allow-scripts allow-same-origin allow-forms`)\n- Backdrop click and [[Escape]] key to close\n- Iframe src cleared to `about:blank` after closing"
+      },
+
+      {
+        "title": "Theme System",
+        "group": "Settings",
+        "badge": "Core",
+        "content": "The portfolio supports 11 themes, each overriding a full set of CSS custom properties.\n\n---\n\n### Available Themes\n\n| Theme | Accent | Background | Style |\n|-------|--------|------------|-------|\n| Dark Gold (default) | `#f0c46b` | `#0a0d14` | Gold on dark navy |\n| Light | `#c88d1b` | `#f6f8fc` | Gold on white |\n| Midnight | `#7bb2ff` | `#060815` | Blue on deep navy |\n| Emerald | `#5ce8a0` | `#071210` | Green on dark green |\n| Rose | `#ff7eb3` | `#120810` | Pink on dark purple |\n| Sunset | `#ff9a52` | `#140e08` | Orange on dark brown |\n| Arctic | `#64d2ff` | `#080e14` | Cyan on dark blue |\n| Lavender | `#b08aff` | `#0e0a16` | Purple on deep purple |\n| Cherry | `#ff6464` | `#140808` | Red on dark red |\n| Ocean | `#4dd8e0` | `#060d12` | Teal on dark teal |\n| Mono | `#e0e0e0` | `#0e0e0e` | Gray on black |\n\n---\n\n### How It Works\n\nThemes are applied by adding a class to `document.body` (e.g. `theme-midnight`). Each theme class overrides these CSS custom properties:\n\n- `--bg`, `--bg-soft` — Page backgrounds\n- `--surface`, `--surface-strong` — Surface layers\n- `--card-bg`, `--card-bg-solid` — Card backgrounds\n- `--text`, `--muted`, `--muted-strong` — Text colors\n- `--border`, `--border-strong` — Borders\n- `--accent`, `--accent-2`, `--accent-dark` — Accent colors\n- `background` — Page gradient\n\n---\n\n### Theme-Aware Elements\n\nThe cursor glow, particle background, card hover glow, background orbs, selection highlight, and settings panel all read from `--accent` and adapt automatically when the theme changes."
+      },
+
+      {
+        "title": "Settings Panel",
+        "group": "Settings",
+        "content": "The settings panel is a fixed overlay accessible from the gear FAB button on every page.\n\n---\n\n### Controls\n\n| Setting | Type | Options | Effect |\n|---------|------|---------|--------|\n| Theme | Dropdown | 11 themes | Swaps body class + CSS variables |\n| Surface | Dropdown | Glass / Solid | Glass = transparent, Solid = opaque cards |\n| Font | Dropdown | Normal / Large | Large = `--font-base: 17px` |\n| Animation | Slider (0–100) | Off → Dynamic | Controls `--motion-distance` and `--motion-duration` |\n| Radius | Slider (0–100) | Sharp → Pill | Controls `--radius-scale` multiplier |\n\n---\n\n### How Settings Apply\n\n`applySettings()` resets `document.body.className` to empty, then adds:\n\n- `theme-{value}` class\n- `style-solid` if surface is solid\n- `font-large` if font is large\n- `reduce-motion` if animation is 0\n\nThen sets CSS custom properties directly:\n\n```txt\n--motion-distance = (animation / 100) × 38 px\n--motion-duration = 0.2 + (animation / 100) × 0.75 s\n--radius-scale    = 0.5 + (radius / 100) × 1.0\n```\n\n---\n\n### Persistence\n\nSettings are saved to `localStorage(\"site-settings\")` as a JSON object. On page load, `loadSettings()` restores values and applies them. Includes migration logic for old 0/1/2 slider values to the 0–100 scale.\n\n---\n\n### Reset\n\nThe \"Reset\" button removes the localStorage key and reloads the page, restoring defaults."
+      },
+
+      {
+        "title": "Custom Controls",
+        "group": "Settings",
+        "content": "The settings panel uses custom-built UI controls that wrap native HTML elements.\n\n---\n\n### CustomDropdown\n\nWraps a native `<select>` with custom markup for consistent styling.\n\n- Creates a `.custom-dropdown-btn` with display text and arrow\n- Opens a `.custom-dropdown-list` (listbox) with selectable items\n- Selection updates the native select value and dispatches a `change` event\n- Supports: click toggle, outside click close, keyboard (Enter/Space/Escape)\n\n---\n\n### CustomSlider\n\nWraps a native `<input type=\"range\">` with a visual track, fill, thumb, and label.\n\n- Creates a `.custom-slider-track` with `.custom-slider-fill` + `.custom-slider-thumb`\n- Displays a `.custom-slider-value` label that maps values to descriptive text\n- Supports: mouse drag, touch drag, keyboard arrows (step=5)\n- Full ARIA: `role=\"slider\"`, `aria-valuemin`, `aria-valuemax`, `aria-valuenow`, `aria-valuetext`\n\n---\n\n### Slider Label Maps\n\n**Animation Level:**\n\n| Value | Label |\n|-------|-------|\n| 0 | Off |\n| 15 | Minimal |\n| 35 | Subtle |\n| 50 | Normal |\n| 70 | Lively |\n| 85 | Bold |\n| 100 | Dynamic |\n\n**Radius Level:**\n\n| Value | Label |\n|-------|-------|\n| 0 | Sharp |\n| 20 | Tight |\n| 40 | Moderate |\n| 50 | Normal |\n| 65 | Rounded |\n| 85 | Soft |\n| 100 | Pill |"
+      },
+
+      {
+        "title": "Particle Background",
+        "group": "Interactive",
+        "badge": "Effect",
+        "content": "An interactive canvas particle system rendered behind all page content.\n\n---\n\n### How It Works\n\n- A `<canvas id=\"interactiveBg\">` is prepended to `<body>` on load\n- Runs inside an IIFE with its own animation loop\n- Particle count: `Math.min(60, Math.floor(window.innerWidth / 22))`\n- Each particle has position, velocity, and radius\n\n---\n\n### Behavior\n\n| Property | Value |\n|----------|-------|\n| Max particles | 60 |\n| Interaction radius | 140px |\n| Line distance | 120px |\n| Velocity dampening | 0.985 per frame |\n| Edge behavior | Wrap around |\n\n---\n\n### Mouse Interaction\n\n- Particles within 140px of the cursor are pushed away\n- Push force follows inverse distance (closer = stronger)\n- Tracks `mousemove`, `mouseleave`, `touchmove`, `touchend`\n\n---\n\n### Styling\n\n- Color reads `--accent` CSS variable and parses hex to RGB\n- Lines drawn between particles within 120px, with opacity based on distance\n- Particle circles rendered at 60% opacity\n\n---\n\n### Performance\n\n- Cancels animation loop if `prefers-reduced-motion` is active or `.reduce-motion` class is present\n- Resizes canvas on window resize\n- Returns a `{ resize }` method for manual resize calls"
+      },
+
+      {
+        "title": "Cursor Glow",
+        "group": "Interactive",
+        "badge": "Effect",
+        "content": "A smooth, theme-aware glow that follows the mouse cursor.\n\n---\n\n### How It Works\n\n1. A `.cursor-glow` div is appended to `<body>` on load\n2. On `mousemove`, the target position updates\n3. A `requestAnimationFrame` loop lerps the glow position toward the target with factor `0.15`\n4. On `mouseleave`, opacity fades to 0\n\n---\n\n### Styling\n\n- Size: 300×300px fixed circle\n- `mix-blend-mode: screen`\n- `pointer-events: none`\n- Uses a radial gradient that adapts per theme via CSS `[data-theme]` selectors\n- Hidden when `.reduce-motion` is active"
+      },
+
+      {
+        "title": "Card Tilt",
+        "group": "Interactive",
+        "badge": "Effect",
+        "content": "A 3D tilt effect on cards that responds to mouse position.\n\n---\n\n### How It Works\n\n- Uses event delegation on `main` or `body`\n- On `mousemove` over `.card`, `.dashboard-card`, `.stat-card`, or `.cta-card`:\n  - Calculates mouse position relative to card center\n  - Sets `--rotateX` and `--rotateY` CSS variables (±5° range)\n  - Sets `--mouse-x` and `--mouse-y` for radial gradient glow\n- On `mouseleave`: resets all rotation values to 0\n\n---\n\n### CSS Side\n\nCards use `transform-style: preserve-3d` and apply:\n\n```txt\ntransform: perspective(800px) rotateX(var(--rotateX)) rotateY(var(--rotateY))\n```\n\nA `::after` pseudo-element renders a radial gradient glow at `--mouse-x` / `--mouse-y`."
+      },
+
+      {
+        "title": "Reveal Animations",
+        "group": "System",
+        "content": "Elements with the `.reveal` class animate into view as the user scrolls.\n\n---\n\n### How It Works\n\n- An `IntersectionObserver` watches all `.reveal` elements with `threshold: 0.12` and `rootMargin: \"50px\"`\n- When an element enters the viewport, `.is-visible` is added and the observer unobserves it\n- Elements start with `opacity: 0` and `translateY(var(--motion-distance)) scale(0.985)`\n- `.is-visible` transitions to `opacity: 1` and `translateY(0) scale(1)`\n\n---\n\n### Stagger Delays\n\n| Class | Delay |\n|-------|-------|\n| `.delay-1` | 90ms |\n| `.delay-2` | 180ms |\n\n---\n\n### Easing\n\nUses `cubic-bezier(0.22, 0.61, 0.36, 1)` for a smooth deceleration curve."
+      },
+
+      {
+        "title": "Page Transitions",
+        "group": "System",
+        "content": "All internal navigation uses a smooth opacity fade.\n\n---\n\n### How It Works\n\n1. Click delegation catches all `<a>` tag clicks\n2. Skips: external links, anchor links, `mailto:`, `data-preview` links\n3. Adds `body.page-transitioning` (sets `opacity: 0`)\n4. After 350ms, navigates to the target URL\n5. On the new page, `.page-transitioning` is removed (fades in)\n\n---\n\n### Other Navigation Features\n\n- **Back to top**: Shows when `scrollY > 300`, smooth-scrolls to top\n- **Scrolled header**: Adds `.scrolled` class to `.site-header` when `scrollY > 20` (stronger background + accent border glow)\n- **Mobile nav**: Hamburger toggle shows/hides nav links as a dropdown panel"
+      },
+
+      {
+        "title": "Preview Overlay",
+        "group": "System",
+        "content": "The portfolio page supports live project previews in a sandboxed iframe.\n\n---\n\n### How It Works\n\n1. Links with a `data-preview` attribute trigger the overlay instead of navigating\n2. The overlay loads the URL into `#previewFrame` (sandboxed with `allow-scripts allow-same-origin allow-forms`)\n3. Title is pulled from the closest `.project-card h2`\n4. Close: click the close button, click the backdrop, or press [[Escape]]\n5. Iframe `src` is set to `about:blank` after a 300ms transition delay\n\n---\n\n### Styling\n\n- Fullscreen fixed overlay with `backdrop-filter: blur(8px)`\n- Content container: max-width 1200px, 85vh height, rounded corners\n- Close button rotates 90° and turns red on hover\n- On mobile (≤760px), the preview goes fullscreen"
+      },
+
+      {
+        "title": "Styling Architecture",
+        "group": "Design",
+        "badge": "Core",
+        "content": "The entire site is styled with a single `styles.css` file (~3,100 lines) using CSS custom properties for theming.\n\n---\n\n### CSS Custom Properties\n\n| Variable | Default | Purpose |\n|----------|---------|--------|\n| `--bg` | `#0a0d14` | Page background |\n| `--bg-soft` | `#111725` | Soft background |\n| `--surface` | `rgba(18,24,38,0.72)` | Surface layer |\n| `--card-bg` | `rgba(16,23,37,0.7)` | Card background |\n| `--text` | `#f5f7fb` | Primary text |\n| `--muted` | `#a8b2c8` | Secondary text |\n| `--accent` | `#f0c46b` | Accent color |\n| `--accent-2` | `#ffdf9a` | Secondary accent |\n| `--accent-dark` | `#d5a94d` | Dark accent |\n| `--border` | `rgba(255,255,255,0.1)` | Default border |\n| `--success` | `#69e3a7` | Success |\n| `--danger` | `#ff8585` | Danger |\n| `--radius-scale` | `1` | Border radius multiplier |\n| `--motion-distance` | `26px` | Reveal animation distance |\n| `--motion-duration` | `0.7s` | Reveal animation duration |\n| `--max-width` | `1180px` | Content max width |\n| `--font-base` | `16px` | Base font size |\n\n---\n\n### Key Design Patterns\n\n- **Glassmorphism** — Cards use `backdrop-filter: blur(18px)` with transparent backgrounds\n- **Radius scaling** — All border radii use `calc(Xpx * var(--radius-scale))`\n- **Card glow** — `::after` pseudo-element with radial gradient at mouse position\n- **Glass overlay** — `::before` with subtle white gradient on cards\n- **Background** — Dual radial gradients (accent top-left, blue top-right) over a linear gradient\n- **Selection** — Uses accent color at 35% opacity"
+      },
+
+      {
+        "title": "Responsive Design",
+        "group": "Design",
+        "content": "The site adapts across 4 responsive breakpoints.\n\n---\n\n### Breakpoints\n\n| Width | Changes |\n|-------|---------|\n| ≤980px | Hero, 2-col, 3-col grids → 1 column. Stats → 1 column. |\n| ≤768px | Docs sidebar → horizontal scrollable tabs. README → single column. Download sidebar moves to top. |\n| ≤760px | Hamburger nav shown. Nav links → absolute dropdown. Buttons → full width. Preview → fullscreen. |\n| ≤640px | Hero stats gap reduced. Tighter spacing. |\n\n---\n\n### Mobile Adaptations\n\n- **Navigation**: Hamburger button reveals vertical nav panel\n- **Docs sidebar**: Converts from vertical sticky sidebar to horizontal scrollable tab bar\n- **Download sidebar**: Moves from sticky right column to stacked above readme\n- **Cards**: Stack vertically with full-width buttons\n- **Preview overlay**: Extends to fullscreen\n- **Settings panel width**: Reduces for smaller viewports"
+      },
+
+      {
+        "title": "Accessibility",
+        "group": "Design",
+        "content": "The site includes accessibility features throughout.\n\n---\n\n### Features\n\n| Feature | Implementation |\n|---------|---------------|\n| Reduced motion | Detects `prefers-reduced-motion` media query, adds `.reduce-motion` class |\n| ARIA sliders | Custom sliders have `role=\"slider\"`, `aria-valuemin`, `aria-valuemax`, `aria-valuenow`, `aria-valuetext` |\n| Focus indicators | `button:focus-visible` shows `2px solid var(--accent)` outline |\n| Semantic HTML | Proper heading hierarchy, `<article>`, `<nav>`, `<main>`, `<footer>` |\n| Hidden decorations | Background orbs use `aria-hidden=\"true\"` |\n| Keyboard support | Custom dropdowns respond to Enter, Space, Escape |\n| Dev grid | Press [[G]] to toggle a 40px grid overlay (skipped when typing) |\n\n---\n\n### Motion Control\n\nWhen reduced motion is active:\n\n- All CSS transitions and animations are disabled\n- Canvas particle system stops its animation loop\n- Cursor glow is hidden\n- Reveal animations apply instantly (no translateY/scale)"
+      },
+
+      {
+        "title": "Architecture",
+        "group": "Reference",
+        "content": "### Architectural Layers\n\n| Layer | Responsibility |\n|-------|---------------|\n| Data | `projects.json` — content, docs, readmes, downloads, images |\n| Logic | `script.js` — rendering, settings, effects, navigation |\n| Presentation | `styles.css` — theming, layout, components, responsive |\n| Pages | 5 HTML files — shared nav, footer, settings panel |\n| Storage | localStorage — settings persistence |\n\n---\n\n### Key Patterns\n\n- **Data-driven rendering** — No hardcoded project content in HTML\n- **CSS custom properties** — All colors, spacing, and radii are configurable\n- **Event delegation** — Card tilt, page transitions, and portfolio clicks use delegation\n- **IntersectionObserver** — Used for reveal animations and scroll-spy\n- **IIFE isolation** — Particle system and cursor glow run in self-contained scopes\n- **Class-based theming** — Body class swaps override all CSS variables at once\n\n---\n\n### Design Principles\n\n- **Zero dependencies** — No frameworks, build tools, or CDN libraries\n- **Single data source** — All projects in one JSON file\n- **Separation of concerns** — Data, logic, and presentation are fully separated\n- **Progressive enhancement** — Works without JS (static HTML), enhanced with effects\n- **Performance-conscious** — Observers unobserve after reveal, particles cap at 60, reduced motion respected"
+      }
     ]
-  },
-  {
-    "title": "EasyMusic",
-    "tag": "Website",
-    "description": "A simple way to listen to your favorite music, artist, podcasts, audio book, etc.",
-    "stack": ["JavaScript", "Youtube API", "UI"],
-    "links": [
-      { "label": "Live Demo", "url": "https://easy-music-weld.vercel.app/", "style": "primary", "preview": "https://easy-music-weld.vercel.app/" },
-      { "label": "GitHub", "url": "https://github.com/wisp-ts/EasyMusic", "style": "secondary" }    ]
-  },
+  }
+},
+{
+  "title": "EasyMusic",
+  "slug": "easymusic",
+  "tag": "Website",
+  "description": "A zero-dependency, single-file music player powered by the YouTube Data API — with search, queue management, playlists, favorites, keyboard shortcuts, and full session persistence.",
+  "stack": ["JavaScript", "YouTube Data API", "YouTube iFrame API", "HTML", "CSS"],
+  "links": [
+    {
+      "label": "Live Demo",
+      "url": "https://easy-music-weld.vercel.app/",
+      "style": "primary",
+      "preview": "https://easy-music-weld.vercel.app/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/wisp-ts/EasyMusic",
+      "style": "secondary"
+    }
+  ],
+  "docs": {
+    "hero": "EasyMusic is a zero-dependency, single-file music player that turns YouTube into a fully interactive listening experience — with real-time search, queue management, playlists, favorites, keyboard shortcuts, data import/export, and full session persistence via localStorage.",
+
+    "readme": "# EasyMusic\n\nA single-file YouTube music player. No frameworks. No build tools. No dependencies.\n\n---\n\n## What This Is\n\nA **fully state-managed UI application** packed into one HTML file — ~3,000 lines of inline CSS, HTML, and JavaScript running a complete music player with YouTube integration.\n\n---\n\n## Architecture\n\n```txt\nConfig → State → Logic → Rendering → Player\n```\n\nEvery user action mutates a central state object. State changes trigger targeted UI re-renders and player sync. All state is persisted to localStorage automatically.\n\n---\n\n## Features\n\n- **YouTube Search** — Data API v3 with sort, filters, and search history\n- **Embedded Playback** — iFrame API with seek, volume, and progress tracking\n- **Queue System** — Add, remove, reorder, shuffle, clear, play-next insertion\n- **Repeat Modes** — Off, repeat one, repeat all\n- **Favorites** — Heart any track, max 250, persisted across sessions\n- **Playlists** — Create, rename, delete, add/remove tracks\n- **Recently Played** — Last 50 tracks tracked automatically\n- **Keyboard Shortcuts** — Space, arrows, Q, F, Ctrl+K, Escape\n- **Data Backup** — Export/import JSON, clear all data\n- **Shareable Links** — `?v=videoId` URL parameter auto-plays on load\n- **Settings Panel** — Region, safe search, duration filter, compact mode, result limits\n- **Responsive** — Desktop grid layout collapses to mobile single-column\n- **Glassmorphism UI** — Dark theme with transparency, animations, and custom scrollbars\n\n---\n\n## Tech Stack\n\n| Layer | Technology |\n|-------|------------|\n| Markup | Semantic HTML5 |\n| Styling | CSS3 (custom properties, grid, glassmorphism) |\n| Logic | Vanilla JavaScript (IIFE pattern) |\n| Search | YouTube Data API v3 |\n| Playback | YouTube iFrame Player API |\n| Storage | localStorage (two keys, auto-save) |\n\n> [!info] The entire app — styles, markup, and ~1,800 lines of JavaScript — runs from a single HTML file with zero external dependencies.",
+
+    "downloads": [
+      { "label": "Source Code", "url": "https://github.com/wisp-ts/EasyMusic", "type": ".zip" }
+    ],
+    "images": [],
+
+    "sections": [
+      {
+        "title": "Overview",
+        "group": "Getting Started",
+        "content": "EasyMusic is a single-page music application that uses the YouTube Data API v3 to search, play, and manage music directly in the browser.\n\nThe entire application runs inside one HTML file — roughly 3,000 lines split across inline CSS (~1,000 lines), HTML (~200 lines), and JavaScript (~1,800 lines in an IIFE).\n\n---\n\n### What You Get\n\n| Feature | Description |\n|---------|------------|\n| YouTube search | Real-time queries with sort, filters, and history |\n| Embedded playback | iFrame API with seek, volume, and progress |\n| Queue management | Add, remove, reorder, shuffle, play-next |\n| Favorites | Heart tracks (max 250), persisted |\n| Playlists | Create, rename, delete, manage tracks |\n| Recents | Last 50 played tracks |\n| Keyboard shortcuts | 7 shortcuts for fast navigation |\n| Data backup | Export/import JSON, clear all |\n| Share links | `?v=videoId` URL auto-plays |\n| Settings | Region, safe search, compact mode, and more |\n| Responsive | Full mobile support |\n\n---\n\n### Requirements\n\n- A YouTube Data API v3 key\n- A modern browser (Chrome, Firefox, Edge, Safari)\n- No server, no build tools, no dependencies"
+      },
+
+      {
+        "title": "Configuration",
+        "group": "Getting Started",
+        "content": "EasyMusic is configured through `window.EASYMUSIC_CONFIG` at the top of the script block.\n\n```js\nwindow.EASYMUSIC_CONFIG = {\n  appName: \"EasyMusic\",\n  apiKey: \"YOUR_API_KEY\",\n  regionCode: \"US\",\n  maxResults: 20,\n  defaultOrder: \"relevance\",\n  enableVideoDetails: true,\n  cacheTTLHours: 24,\n  fallbackMixes: [\"lofi hip hop\", \"rap hits\", \"pop hits\"]\n};\n```\n\n---\n\n### Config Reference\n\n| Option | Type | Default | Description |\n|--------|------|---------|------------|\n| `appName` | `string` | `\"EasyMusic\"` | App title shown in sidebar and browser tab |\n| `apiKey` | `string` | — | YouTube Data API v3 key (required) |\n| `regionCode` | `string` | `\"US\"` | Region code for trending and search |\n| `maxResults` | `number` | `20` | Results per API call (clamped 5–50) |\n| `defaultOrder` | `string` | `\"relevance\"` | Default search sort order |\n| `enableVideoDetails` | `boolean` | `true` | Fetch video durations (extra API calls) |\n| `cacheTTLHours` | `number` | `24` | Duration cache TTL in hours |\n| `fallbackMixes` | `string[]` | `[...]` | Predefined search suggestions |\n\n> [!warning] The API key is required for all search and playback functionality. Without it, the app shows a missing-key notice.\n\n---\n\n### User Settings\n\nUsers can also configure behavior via the in-app settings modal:\n\n| Setting | Type | Default | Description |\n|---------|------|---------|------------|\n| `regionCode` | `string` | `\"US\"` | YouTube region override |\n| `maxResults` | `number` | `25` | Results per search |\n| `defaultOrder` | `string` | `\"relevance\"` | Default sort order |\n| `safeSearch` | `string` | `\"moderate\"` | Safe search: `none`, `moderate`, `strict` |\n| `videoDuration` | `string` | `\"any\"` | Duration filter: `any`, `short`, `medium`, `long` |\n| `enableVideoDetails` | `boolean` | `true` | Fetch durations for results |\n| `cacheTTLHours` | `number` | `24` | Cache TTL |\n| `showRecentsOnHome` | `boolean` | `false` | Show recently played on home view |\n| `compactMode` | `boolean` | `false` | Reduced padding and thumbnail sizes |\n| `autoplayOnSelect` | `boolean` | `true` | Auto-play when selecting a track |"
+      },
+
+      {
+        "title": "State System",
+        "group": "Architecture",
+        "content": "The entire app revolves around a single central `state` object. Every user action mutates state, which triggers a targeted UI re-render and a `save()` to localStorage.\n\n---\n\n### Data Flow\n\n```txt\nUser Action → Event Handler → State Mutation → save() → Re-render → Player Sync\n```\n\n---\n\n### State Properties\n\n| Property | Type | Default | Purpose |\n|----------|------|---------|--------|\n| `view` | `string` | `\"home\"` | Current view: `home`, `search`, `library`, `playlist:<id>` |\n| `results` | `array` | `[]` | Current search results |\n| `trending` | `array` | `[]` | Trending tracks from YouTube |\n| `query` | `string` | `\"\"` | Current search query |\n| `order` | `string` | `\"relevance\"` | Current sort order |\n| `filterSuffix` | `string` | `\"\"` | Active search filter suffix |\n| `queue` | `array` | `[]` | Playback queue |\n| `currentIndex` | `number` | `-1` | Active track index in queue |\n| `favorites` | `array` | `[]` | Favorited tracks (max 250) |\n| `recents` | `array` | `[]` | Recently played (max 50) |\n| `searchHistory` | `array` | `[]` | Past search queries (max 12) |\n| `playlists` | `array` | `[]` | User-created playlists |\n| `playerReady` | `boolean` | `false` | Whether iFrame player is initialized |\n| `isPlaying` | `boolean` | `false` | Current playback state |\n| `shuffle` | `boolean` | `false` | Shuffle mode |\n| `repeat` | `string` | `\"off\"` | Repeat mode: `off`, `all`, `one` |\n| `volume` | `number` | `70` | Volume level (0–100) |\n| `muted` | `boolean` | `false` | Mute state |\n| `detailsCache` | `object` | `{}` | Video duration cache (keyed by videoId) |\n| `settings` | `object` | `{...}` | User-configurable settings |\n\n---\n\n### Track Object Shape\n\n```js\n{\n  videoId: \"dQw4w9WgXcQ\",\n  title: \"Track Title\",\n  channel: \"Channel Name\",\n  thumb: \"https://i.ytimg.com/vi/.../mqdefault.jpg\",\n  durationSec: 212\n}\n```\n\n---\n\n### Playlist Object Shape\n\n```js\n{\n  id: \"a3f2b1c0\",\n  name: \"My Playlist\",\n  tracks: []\n}\n```"
+      },
+
+      {
+        "title": "Search",
+        "group": "Features",
+        "badge": "Core",
+        "content": "Search is powered by the YouTube Data API v3 with `videoCategoryId=10` (Music).\n\n---\n\n### How It Works\n\n```txt\nQuery + Filter Suffix → ytSearchURL() → apiGET() → normSearch() → fillDurations() → Render\n```\n\n1. User types a query and hits Enter or clicks search\n2. The query is combined with any active filter suffix (e.g. `\"official audio\"`)\n3. Results are normalized into the internal track object format\n4. If `enableVideoDetails` is on, durations are fetched and cached\n5. Results render as a track list with play, favorite, and menu actions\n\n---\n\n### Sort Options\n\n| Option | API Value | Description |\n|--------|----------|------------|\n| Relevance | `relevance` | Default YouTube ranking |\n| Views | `viewCount` | Most viewed first |\n| Newest | `date` | Most recent first |\n| Rating | `rating` | Highest rated first |\n\n---\n\n### Filter Chips\n\n| Filter | Suffix Appended | Description |\n|--------|----------------|------------|\n| All | `\"\"` | No filter |\n| Official | `\"official audio\"` | Official audio releases |\n| Lyrics | `\"lyrics\"` | Lyric videos |\n| Live | `\"live\"` | Live performances |\n\n---\n\n### Search History\n\n- Last 12 unique queries are stored\n- Displayed as clickable chips below the search bar\n- Clicking a chip re-runs that search\n- Persisted across sessions via localStorage"
+      },
+
+      {
+        "title": "Player",
+        "group": "Features",
+        "badge": "Core",
+        "content": "Playback uses the YouTube iFrame Player API. The player is embedded as a hidden 1x1 pixel `<div>` positioned off-screen — only audio is used.\n\n---\n\n### Controls\n\n| Control | Action |\n|---------|-------|\n| Play/Pause | Toggles `playVideo()` / `pauseVideo()` |\n| Next | Advances to next track (random offset if shuffle is on) |\n| Previous | Goes back one track (clamped to 0) |\n| Seek | Range input mapped to `seekTo()` with 250ms progress updates |\n| Volume | Range input (0–100) applied via `setVolume()` |\n| Mute | Toggles mute state, restores `lastVolume` if unmuting from 0 |\n\n---\n\n### Volume Icons\n\n| Volume Range | Icon |\n|-------------|------|\n| 0 | muted |\n| 1–34 | low |\n| 35–69 | medium |\n| 70–100 | high |\n\n---\n\n### End-of-Track Behavior\n\n```txt\nRepeat One  → Replay current track\nHas Next    → Play next (shuffle-aware)\nRepeat All  → Wrap to index 0\nElse        → Stop playback\n```\n\n---\n\n### Now Playing Bar\n\nThe player bar renders as a 3-column CSS grid:\n\n- **Left** — Thumbnail, title, channel, heart button\n- **Center** — Transport controls (prev, play/pause, next), seek bar with timestamps\n- **Right** — Repeat, shuffle, queue toggle, volume slider\n\n> [!tip] Progress updates run on a 250ms interval. The seek bar uses a 0–1000 range for smooth precision."
+      },
+
+      {
+        "title": "Queue",
+        "group": "Features",
+        "badge": "Core",
+        "content": "The queue system manages playback order with full manipulation support.\n\n---\n\n### Operations\n\n| Function | Description |\n|----------|------------|\n| Play | Adds track to queue (deduped), auto-plays if enabled |\n| Play Next | Inserts track immediately after current position |\n| Remove | Removes track at index, adjusts current position as needed |\n| Reorder | Swaps queue items up/down |\n| Clear | Empties queue, resets index |\n\n---\n\n### Queue Drawer\n\nOpened via the queue button or `Q` key. Slides in from the right with a backdrop overlay.\n\n- **Shuffle button** — Fisher-Yates shuffle, keeps current track at index 0\n- **Clear button** — Empties the entire queue\n- Each item shows: thumbnail, title, channel, move up/down buttons, remove button\n- Clicking a queue item plays it directly\n\n---\n\n### Shuffle Mode\n\nWhen shuffle is enabled, `next()` picks a random offset (1 to `queue.length - 1`) from the current index, wrapping around if needed. This avoids repeating the current track.\n\n---\n\n### Repeat Modes\n\n| Mode | Behavior |\n|------|----------|\n| Off | Stops after the last track |\n| All | Wraps to the first track when queue ends |\n| One | Replays the current track on end |"
+      },
+
+      {
+        "title": "Favorites",
+        "group": "Features",
+        "content": "The favorites system lets users save tracks with a single click.\n\n---\n\n### Behavior\n\n- **Max 250** favorites (oldest are not removed — new ones are rejected if full)\n- Tracks are deduped by `videoId`\n- Toggle adds or removes the track and shows a toast\n\n---\n\n### Where Favorites Appear\n\n| Location | Display |\n|----------|--------|\n| Player bar | Heart button for current track |\n| Track rows | Heart icon on every track |\n| Sidebar | Up to 8 mini favorites with thumbnails |\n| Library view | Full favorites list with \"Clear favorites\" button |\n\n---\n\n### Clearing\n\nThe \"Clear favorites\" button in the Library view opens a confirmation modal before wiping all favorites."
+      },
+
+      {
+        "title": "Playlists",
+        "group": "Features",
+        "content": "Users can create and manage custom playlists.\n\n---\n\n### Operations\n\n| Action | Description |\n|--------|------------|\n| Create | New playlist with a random hex ID |\n| Rename | Change playlist name |\n| Delete | Remove playlist (redirects if currently viewing) |\n| Add track | Deduped, prepended to front |\n| Remove track | By videoId |\n\n---\n\n### UI\n\n- Playlists appear in the sidebar with track count and a music icon\n- Clicking a sidebar playlist navigates to its view\n- Playlist view shows the full track list with rename, delete, and back-to-library buttons\n- The track menu (`...` button on any track) has an \"Add to playlist\" dropdown\n- Delete and rename use confirmation modals\n\n---\n\n### Data Shape\n\n```js\n{\n  id: \"a3f2b1c0\",\n  name: \"My Playlist\",\n  tracks: [\n    { videoId, title, channel, thumb, durationSec }\n  ]\n}\n```\n\nAll playlists persist in localStorage."
+      },
+
+      {
+        "title": "Persistence",
+        "group": "System",
+        "content": "All app state is persisted automatically using two localStorage keys.\n\n---\n\n### Storage Keys\n\n| Key | Contents |\n|-----|----------|\n| `easymusic_state_v4_simple` | View, queue, favorites, recents, playlists, search history, playback settings, user settings |\n| `easymusic_details_cache_v1` | Video duration cache (keyed by videoId) |\n\n---\n\n### How It Works\n\n- `save()` serializes and writes both keys after every state mutation\n- `load()` reads both keys on startup with defensive type-checking for every property\n- Both operations are wrapped in try/catch for safety\n\n---\n\n### What Gets Persisted\n\n| Data | Persisted |\n|------|-----------|\n| Current view | Yes |\n| Queue + current track | Yes |\n| Favorites (max 250) | Yes |\n| Recently played (max 50) | Yes |\n| Search history (max 12) | Yes |\n| Playlists + tracks | Yes |\n| Volume, shuffle, repeat | Yes |\n| User settings | Yes |\n| Last played video ID | Yes |\n| Duration cache | Yes (separate key) |\n| Search results | No (re-fetched) |\n| Trending | No (re-fetched) |\n\n> [!info] Users can refresh, close the tab, or leave the page entirely — the app resumes exactly where they left off."
+      },
+
+      {
+        "title": "Keyboard Shortcuts",
+        "group": "System",
+        "content": "EasyMusic supports keyboard shortcuts for fast navigation and playback control.\n\n---\n\n### Shortcut Reference\n\n| Key | Action | Notes |\n|-----|--------|-------|\n| [[Space]] | Toggle play/pause | Blocked when focused on input/textarea |\n| [[→]] ArrowRight | Next track | — |\n| [[←]] ArrowLeft | Previous track | — |\n| [[Q]] | Toggle queue drawer | Opens/closes the queue panel |\n| [[F]] | Favorite current track | Toggles heart on now-playing track |\n| [[Ctrl+K]] | Focus search input | Works from any context |\n| [[Escape]] | Close drawer and modal | Closes whichever is open |\n\n> [!tip] Space only fires when no text input is focused — so it won't interfere with typing in the search bar."
+      },
+
+      {
+        "title": "Data Management",
+        "group": "System",
+        "content": "EasyMusic includes a full data backup and management system accessible from the settings modal.\n\n---\n\n### Export\n\nCreates a `easymusic-backup.json` file download containing:\n\n- Favorites\n- Playlists\n- Recently played\n- Search history\n- User settings\n\n---\n\n### Import\n\nReads a JSON backup string and merges it into the current state:\n\n- Favorites are merged and deduped (respects 250 cap)\n- Playlists are merged\n- Recents and search history are merged\n- Settings are overwritten\n- A full save + re-render runs after import\n\n---\n\n### Destructive Actions\n\n| Action | Effect |\n|--------|--------|\n| Clear all data | Removes both localStorage keys and reloads the page |\n| Clear cache | Wipes the duration cache only |\n\n> [!warning] \"Clear all data\" is irreversible. The app opens a confirmation modal before executing."
+      },
+
+      {
+        "title": "Shareable Links",
+        "group": "System",
+        "content": "EasyMusic supports URL-based track sharing using query parameters.\n\n---\n\n### How It Works\n\n1. Copy a link via the track menu — generates a URL like `?v=dQw4w9WgXcQ`\n2. When someone opens that URL, the app reads the `?v=` parameter\n3. The track is looked up or created from the videoId\n4. The track is added to the queue and auto-plays\n\n---\n\n### Access\n\nThe share link option is available in the track menu (`...` button) on any track row."
+      },
+
+      {
+        "title": "Views & Navigation",
+        "group": "UI",
+        "content": "The app has 4 views, managed by the `route()` function.\n\n---\n\n### View Map\n\n| View | Route | Description |\n|------|-------|------------|\n| Home | `\"home\"` | Trending music + optional recently played section |\n| Search | `\"search\"` | Results list, filter chips, sort dropdown, search history |\n| Library | `\"library\"` | Favorites list + playlist card grid |\n| Playlist | `\"playlist:<id>\"` | Single playlist with track list and management buttons |\n\n---\n\n### Navigation\n\n- Sidebar nav buttons: Home, Search, Library — with active state toggling\n- Sidebar playlist items link directly to their playlist view\n- Active nav state is derived from the current view string\n\n---\n\n### Rendering Pattern\n\nAll views use the same pattern:\n\n1. Header is updated with title and subtitle\n2. View-specific HTML is built as a string and injected into the content area\n3. Event delegation on the content element handles all clicks via `data-act` attributes"
+      },
+
+      {
+        "title": "UI Components",
+        "group": "UI",
+        "content": "The interface is composed of reusable UI patterns.\n\n---\n\n### Component Map\n\n| Component | Description |\n|-----------|------------|\n| Sidebar | Brand, API status pill, nav buttons, playlist list, favorite mini-list |\n| Topbar | View title + subtitle |\n| Track row | Index, thumbnail, title, channel, duration, heart, menu button |\n| Player bar | 3-column grid: now-playing info, transport controls, volume |\n| Queue drawer | Slide-in panel from right with backdrop |\n| Modal | Generic overlay with title, body HTML, and footer buttons |\n| Toast | Centered bottom notification (2100ms auto-dismiss) |\n| Filter chips | Clickable pill buttons for search filters |\n| Card grid | Responsive grid of playlist cards |\n\n---\n\n### Modal System\n\nGeneric modal accepts a title, body HTML, and an array of buttons. Each button has a label, variant (`primary`, `danger`, or default), and click handler.\n\nUsed for: Settings, New Playlist, Rename Playlist, Delete confirmations, Track Menu, Clear All Data, Import Backup.\n\n---\n\n### Track Menu\n\nThe `...` button on any track opens a modal with these options:\n\n- Play next\n- Add to queue\n- Favorite / Unfavorite\n- Open on YouTube\n- Copy share link\n- Add to playlist (dropdown)\n- Close\n\n---\n\n### Event Delegation\n\nAll interactive elements inside the main content use `data-act` attributes. A single click listener on the content container routes actions — no per-element handlers are created."
+      },
+
+      {
+        "title": "Styling",
+        "group": "UI",
+        "content": "The UI uses a dark glassmorphism theme with CSS custom properties.\n\n---\n\n### CSS Variables\n\n| Variable | Value | Purpose |\n|----------|-------|--------|\n| `--bg` | `#0b0f14` | Base background |\n| `--panel` | `rgba(255,255,255,0.035)` | Panel/card background |\n| `--panel2` | `rgba(0,0,0,0.22)` | Secondary panel |\n| `--line` | `rgba(255,255,255,0.08)` | Primary border |\n| `--text` | `#eaf0ff` | Primary text color |\n| `--muted` | `#95a3c3` | Secondary text |\n| `--accent` | `#1ed760` | Accent green |\n| `--danger` | `#ff4d6d` | Danger/red |\n| `--radius` | `16px` | Border radius |\n| `--shadow` | `0 14px 44px rgba(0,0,0,0.34)` | Box shadow |\n\n---\n\n### Layout\n\nThe root is a CSS grid: `250px 1fr` columns, `1fr auto` rows. Sidebar spans both rows. Player bar sits in the bottom of column 2.\n\n---\n\n### Background\n\nDual `radial-gradient` (green top-left, blue top-right) layered over a `linear-gradient` — creates depth without images.\n\n---\n\n### Responsive Breakpoints\n\n| Breakpoint | Changes |\n|------------|---------|\n| ≤920px | Single-column layout, player bar stacks vertically, search goes full-width, drawer extends to bottom |\n| ≤520px | Track rows hide duration + last icon, single-column card grid, volume slider hidden, smaller thumbnails |\n\n---\n\n### Compact Mode\n\nCompact mode reduces padding, thumbnail sizes, and icon button sizes across all rows and sidebar items. Toggled via settings."
+      },
+
+      {
+        "title": "YouTube Integration",
+        "group": "Reference",
+        "content": "EasyMusic uses two YouTube APIs for search and playback.\n\n---\n\n### YouTube Data API v3\n\nUsed for searching and fetching video metadata.\n\n| Endpoint | Purpose |\n|---------|--------|\n| `search` | Queries with category=10 (Music), region, order, safe search |\n| `videos` (trending) | Fetches `chart=mostPopular` with category=10 |\n| `videos` (details) | Fetches `contentDetails` and `statistics` for duration data |\n\nAll API calls go through a fetch wrapper that validates the API key exists and throws on non-OK responses.\n\n---\n\n### YouTube iFrame Player API\n\nUsed for audio playback.\n\n- Loaded dynamically via script injection\n- Player is created in a hidden 1x1 pixel div positioned off-screen\n- Config: `playsinline: 1`, `rel: 0`, `modestbranding: 1`\n- Events: `onReady` (sets volume, starts progress ticker), `onStateChange` (syncs play/pause/ended)\n\n---\n\n### Data Normalization\n\nBoth search results and video details are normalized into the same `{ videoId, title, channel, thumb, durationSec }` shape before use.\n\n---\n\n### Duration Cache\n\nVideo durations are fetched in batches of up to 50 IDs per request. Results are cached with a configurable TTL. ISO 8601 duration strings (`PT1H2M3S`) are parsed into total seconds."
+      },
+
+      {
+        "title": "Error Handling",
+        "group": "Reference",
+        "content": "EasyMusic handles errors defensively at every boundary.\n\n---\n\n### Error Points\n\n| Location | Strategy |\n|----------|----------|\n| API calls | Catches non-OK HTTP responses, extracts error text (truncated to 160 chars) |\n| State loading | try/catch on both localStorage reads with property-level type checking |\n| Duration fetching | try/catch — silently skips on failure |\n| Progress updates | try/catch around player method calls |\n| Track loading | try/catch around `loadVideoById()` |\n| Play/pause | try/catch around player state check |\n| YouTube script | `onerror` handler toasts on load failure |\n| Data import | try/catch on JSON.parse with object shape validation |\n| Missing API key | Shows a help notice with setup instructions |\n\n---\n\n### Design\n\n- No unhandled exceptions reach the user\n- API failures degrade gracefully (missing durations are acceptable)\n- localStorage corruption is handled by defaulting individual properties\n- The app always remains functional even if external services fail"
+      },
+
+      {
+        "title": "Architecture",
+        "group": "Reference",
+        "content": "### File Structure\n\n```txt\neasymusic.html\n├── <style>     ~1,000 lines — CSS variables, layout, components, responsive\n├── <body>      ~200 lines   — Sidebar, main, player bar, drawer, modal, toast\n└── <script>    ~1,800 lines — IIFE with config, state, API, logic, rendering\n```\n\n---\n\n### Architectural Layers\n\n| Layer | Responsibility |\n|-------|---------------|\n| Config | API keys, defaults, feature flags |\n| State | Central data store + persistence |\n| API | YouTube search + metadata + player |\n| Logic | Queue, favorites, playlists, playback |\n| Rendering | DOM updates, HTML generation |\n| Events | User input handling via delegation |\n\n---\n\n### Design Principles\n\n- **Single-file** — Everything ships in one HTML file\n- **State-driven** — UI is a function of state, never the other way around\n- **Zero dependencies** — No frameworks, no build tools, no CDN libraries\n- **Event delegation** — One listener per container, not per element\n- **Defensive persistence** — Every loaded property is type-checked individually\n- **Graceful degradation** — Missing API key, failed fetches, and corrupt storage are all handled"
+      }
+    ]
+  }
+},
   {
     "title": "Cord Hider",
+    "slug": "cord-hider",
     "tag": "MCBE Addon",
     "description": "A simple way to hide your coordinates from being displayed on your screen. Useful for streamers and content creators to hide their personal base coords.",
     "stack": ["Scripting API", "JSON", "UI"],
     "links": [
       { "label": "GitHub", "url": "https://github.com/wisp-ts/Cord-Hider", "style": "primary" }
-    ]
+    ],
+    "docs": {
+      "hero": "A Minecraft Bedrock addon that hides on-screen coordinates to protect base locations during streams and recordings.",
+      "readme": "# Cord Hider\n\nHide your coordinates in Minecraft Bedrock Edition.\n\n![Cord Hider Preview](https://placehold.co/800x400/1a1a2e/ff6b6b?text=Cord+Hider)\n\n## About\n\nCord Hider is a lightweight addon that removes coordinate display from the player's HUD. Designed for streamers, YouTubers, and anyone who wants to keep their base coordinates private while playing.\n\n## Why Use This?\n\nStreamers often show coordinates for navigation, but this reveals base locations to viewers. Overlay-based solutions are clunky and can fail.\n\n> [!info] Cord Hider works at the game level — no OBS configuration needed, no risk of crop mistakes revealing your location.\n\n## Features\n\n- **HUD Suppression** — Removes coordinate text from the screen\n- **Toggle Command** — Show/hide coordinates with an in-game command\n- **Form UI** — Optional toggle via a clean form interface\n- **Zero Impact** — No world data changes, no gameplay modifications\n- **Realm Safe** — Works on realms and servers\n\n![In-Game Toggle](https://placehold.co/800x350/1a1a2e/ffc83c?text=Toggle+On%2FOff)\n\n## Installation\n\n1. Download the `.mcpack` file from the sidebar\n2. Double-click to import into Minecraft\n3. Apply the behavior pack to your world\n4. Enable **Beta APIs** in world settings\n5. Coordinates are hidden by default\n\n> [!warning] Beta APIs must be enabled or the addon will not function.",
+      "downloads": [
+        { "label": "Behavior Pack", "url": "#", "type": ".mcpack" },
+        { "label": "Source Code", "url": "https://github.com/wisp-ts/Cord-Hider", "type": ".zip" }
+      ],
+      "images": [],
+      "sections": [
+        {
+          "title": "Overview",
+          "content": "Cord Hider is a lightweight Minecraft Bedrock Edition addon that removes coordinate display from the player's HUD. It's designed for content creators, streamers, and anyone who wants to keep their base coordinates private while playing.\n\nThe addon uses the Scripting API to intercept and suppress coordinate rendering without affecting any other game UI elements."
+        },
+        {
+          "title": "Why It Exists",
+          "content": "Streamers and YouTubers often show coordinates on screen for navigation, but this reveals their base location to viewers. Some use screen overlays to cover coordinates, but that's clunky and fragile.\n\n> Cord Hider solves this at the game level \u2014 coordinates are hidden directly in-game, so there's nothing to cover up and no risk of revealing your location through OBS crop mistakes.\n\n> [!info] Unlike overlay-based solutions, Cord Hider works even in fullscreen and doesn't require OBS configuration."
+        },
+        {
+          "title": "How It Works",
+          "content": "The addon uses Bedrock's Scripting API to:\n\n### Detection & Suppression\n\n1. Detect when coordinate display is active\n2. Suppress the coordinate text from rendering on the HUD\n3. Allow toggling visibility on/off via an in-game command or form UI\n\n---\n\n> [!note] It runs entirely client-side and doesn't modify any world data or gameplay mechanics. Safe to use on realms and servers."
+        },
+        {
+          "title": "Installation",
+          "badge": "Quick Start",
+          "content": "1. Download the `.mcaddon` file from the GitHub releases page\n2. Double-click to import into Minecraft\n3. Apply the behavior pack to your world\n4. Enable the **Beta APIs** experiment in world settings\n5. Coordinates are now hidden by default \u2014 use the toggle to show/hide\n\n> [!warning] You must enable **Beta APIs** in your world settings or the addon will not function."
+        }
+      ]
+    }
   },
   {
     "title": "Item Manager",
+    "slug": "item-manager",
     "tag": "MCBE Addon",
     "description": "A simple system to add triggers to items. If a user triggers a trigger with an item, a set line of commands will run.",
     "stack": ["TypeScript", "Scripting API", "System flow control"],
     "links": [
       { "label": "Github", "url": "https://github.com/wisp-ts/Item-Manager", "style": "primary" }
-    ]
+    ],
+    "docs": {
+      "hero": "A Minecraft Bedrock system for attaching configurable triggers and command sequences to custom items — no code changes needed per item.",
+      "readme": "# Item Manager\n\nAttach triggers and command sequences to custom Minecraft items.\n\n![Item Manager Preview](https://placehold.co/800x400/1a1a2e/b08aff?text=Item+Manager)\n\n## About\n\nItem Manager is a TypeScript-based system for Minecraft Bedrock that lets you define custom item behaviors through JSON configuration files. Instead of writing script logic for every item, you define triggers (`onUse`, `onHit`, `onEquip`) and map them to command sequences.\n\n## Features\n\n- **Config-Driven** — Define items in JSON, no code changes needed\n- **Multiple Triggers** — `onUse`, `onHit`, `onEquip` events\n- **Command Sequences** — Chain effects, particles, and sounds\n- **Hot Reload** — Add items without restarting the world\n- **TypeScript** — Clean, typed codebase\n\n## Quick Example\n\n```json\n{\n  \"item\": \"custom:fire_wand\",\n  \"triggers\": {\n    \"onUse\": [\n      \"effect @s fire_resistance 10 1\",\n      \"particle minecraft:flame_particle ~ ~1 ~\",\n      \"playsound fire.ignite @s\"\n    ]\n  }\n}\n```\n\n![Trigger Flow](https://placehold.co/800x350/1a1a2e/f0c46b?text=Trigger+%E2%86%92+Commands)\n\n## Installation\n\n1. Download the pack from the sidebar\n2. Import into Minecraft\n3. Define items in the `items/` directory\n4. Enable **Beta APIs** in world settings\n\n> [!warning] Beta APIs must be enabled or triggers won't fire.\n\n> [!tip] Adding a new item is purely a config change — no TypeScript editing required.",
+      "downloads": [
+        { "label": "Behavior Pack", "url": "#", "type": ".mcpack" },
+        { "label": "Source Code", "url": "https://github.com/wisp-ts/Item-Manager", "type": ".zip" }
+      ],
+      "images": [],
+      "sections": [
+        {
+          "title": "Overview",
+          "content": "Item Manager is a TypeScript-based system for Minecraft Bedrock Edition that lets you define custom item behaviors through configuration files. Instead of writing script logic for every item, you define triggers (use, equip, hit) and map them to command sequences.\n\nThe system watches for trigger events and executes the associated command list automatically."
+        },
+        {
+          "title": "How Triggers Work",
+          "group": "Technical",
+          "content": "Each item config defines one or more triggers:\n\n| Trigger | Fires When |\n|---------|-----------|\n| `onUse` | Player right-clicks or taps with the item |\n| `onHit` | Player hits an entity with the item |\n| `onEquip` | Item enters the player's hand slot |\n\nEach trigger maps to an array of commands that run in sequence when activated.\n\n```json\n{\n  \"item\": \"custom:fire_wand\",\n  \"triggers\": {\n    \"onUse\": [\n      \"effect @s fire_resistance 10 1\",\n      \"particle minecraft:flame_particle ~ ~1 ~\",\n      \"playsound fire.ignite @s\"\n    ]\n  }\n}\n```\n\n> [!tip] Commands run in order \u2014 you can chain effects, particles, and sounds for complex item behaviors."
+        },
+        {
+          "title": "Architecture",
+          "group": "Technical",
+          "content": "The system is built with separation of concerns:\n\n### Layers\n\n| Layer | Responsibility |\n|-------|---------------|\n| Config | JSON files define items and their triggers |\n| Event | TypeScript listeners watch for use / hit / equip events |\n| Execution | Command runner executes the mapped sequence |\n\n---\n\n> [!info] Adding a new item is purely a config change \u2014 no TypeScript editing required."
+        },
+        {
+          "title": "Setup",
+          "badge": "Quick Start",
+          "content": "1. Clone the repository or copy the scripts into your addon\n2. Define your items in the `items/` config directory\n3. Each file maps an item identifier to its trigger \u2192 command mappings\n4. Enable the behavior pack on your world with **Beta APIs** enabled\n5. Items will respond to triggers automatically on load\n\n> [!warning] Beta APIs must be enabled in your world settings or triggers won't fire. This is a Minecraft requirement, not an Item Manager limitation."
+        }
+      ]
+    }
   },
   {
     "title": "More Work Coming",
+    "slug": null,
     "tag": "In Progress",
     "description": "I'm still building and improving. This portfolio will grow as I add stronger software, cleaner systems, and better project case studies.",
     "stack": ["Growth", "Learning", "Iteration"],

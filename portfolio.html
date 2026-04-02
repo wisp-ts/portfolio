@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="X-UA-Compatible" content="ie=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <meta property="og:type" content="website">
@@ -28,6 +27,7 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>    
+    <a href="#main" class="skip-link">Skip to content</a>
     <div class="bg-orb orb-1" aria-hidden="true"></div>
     <div class="bg-orb orb-2" aria-hidden="true"></div>
 
@@ -105,16 +105,24 @@
 
     <div class="settings-body">
         <div class="settings-group">
-            <label>Theme</label>
+            <label for="themeSelect">Theme</label>
             <select id="themeSelect">
                 <option value="dark">Dark Gold</option>
                 <option value="light">Light</option>
                 <option value="midnight">Midnight</option>
+                <option value="emerald">Emerald</option>
+                <option value="rose">Rose</option>
+                <option value="sunset">Sunset</option>
+                <option value="arctic">Arctic</option>
+                <option value="lavender">Lavender</option>
+                <option value="cherry">Cherry</option>
+                <option value="ocean">Ocean</option>
+                <option value="mono">Mono</option>
             </select>
         </div>
 
         <div class="settings-group">
-            <label>Surface</label>
+            <label for="densitySelect">Surface</label>
             <select id="densitySelect">
                 <option value="glass">Glass</option>
                 <option value="solid">Solid</option>
@@ -122,7 +130,7 @@
         </div>
 
         <div class="settings-group">
-            <label>Font</label>
+            <label for="fontScaleSelect">Font</label>
             <select id="fontScaleSelect">
                 <option value="normal">Normal</option>
                 <option value="large">Large</option>
@@ -130,13 +138,13 @@
         </div>
 
         <div class="settings-group">
-            <label>Animation</label>
-            <input type="range" id="animationLevel" min="0" max="2">
+            <label for="animationLevel">Animation</label>
+            <input type="range" id="animationLevel" min="0" max="100" value="50">
         </div>
 
         <div class="settings-group">
-            <label>Radius</label>
-            <input type="range" id="radiusLevel" min="0" max="2">
+            <label for="radiusLevel">Radius</label>
+            <input type="range" id="radiusLevel" min="0" max="100" value="50">
         </div>
     </div>
 

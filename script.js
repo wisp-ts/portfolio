@@ -31,6 +31,10 @@ if (projectGrid) {
           return `<a href="${link.url}" class="button ${style} small"${previewAttr}>${link.label}</a>`;
         }).join("");
 
+        const learnMoreHTML = project.slug && project.docs
+          ? `<a href="project.html?p=${encodeURIComponent(project.slug)}" class="button secondary small">Learn More</a>`
+          : "";
+
         article.innerHTML = `
           <div class="project-top">
             <span class="project-tag">${project.tag}</span>
@@ -38,13 +42,365 @@ if (projectGrid) {
           </div>
           <p>${project.description}</p>
           <div class="project-stack">${stackHTML}</div>
-          <div class="project-links">${linksHTML}</div>
+          <div class="project-links">${linksHTML}${learnMoreHTML}</div>
         `;
 
         projectGrid.appendChild(article);
         revealObserver.observe(article);
       });
+    })
+    .catch(() => {
+      projectGrid.innerHTML = `<p style="color:var(--muted);text-align:center;grid-column:1/-1">Failed to load projects.</p>`;
     });
+}
+
+// ========================
+// PROJECT DETAIL PAGE LOADER
+// ========================
+const projectHeroContent = document.getElementById("projectHeroContent");
+const docsNav = document.getElementById("docsNav");
+const docsMain = document.getElementById("docsMain");
+
+if (projectHeroContent && docsNav && docsMain) {
+  const params = new URLSearchParams(window.location.search);
+  const slug = params.get("p");
+
+  if (slug) {
+    fetch("projects.json")
+      .then(res => res.json())
+      .then(projects => {
+        const project = projects.find(p => p.slug === slug);
+        if (!project || !project.docs) {
+          projectHeroContent.innerHTML = `<h1>Project Not Found</h1><p>This project doesn't exist or doesn't have documentation.</p>`;
+          document.getElementById("docsLayout").style.display = "none";
+          return;
+        }
+
+        // Update page title + meta
+        document.title = `${project.title} Docs | Wisp`;
+
+        // Reading progress bar
+        const progressBar = document.createElement("div");
+        progressBar.className = "doc-progress-bar";
+        document.body.prepend(progressBar);
+        window.addEventListener("scroll", () => {
+          const scrollTop = window.scrollY;
+          const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+          const pct = docHeight > 0 ? Math.min(scrollTop / docHeight, 1) : 0;
+          progressBar.style.transform = `scaleX(${pct})`;
+        }, { passive: true });
+
+        // Hero
+        const stackHTML = project.stack.map(s => `<span>${s}</span>`).join("");
+        const heroText = project.docs.hero || project.description;
+        const heroLinksHTML = project.links.map(link => {
+          const style = link.style === "secondary" ? "secondary" : "primary";
+          return `<a href="${link.url}" class="button ${style} small" target="_blank" rel="noopener noreferrer">${link.label}</a>`;
+        }).join("");
+
+        projectHeroContent.innerHTML = `
+          <span class="project-tag">${project.tag}</span>
+          <h1>${project.title}</h1>
+          <p class="project-hero-desc">${heroText}</p>
+          <div class="project-stack">${stackHTML}</div>
+          <div class="project-links hero-doc-links">${heroLinksHTML}</div>
+        `;
+
+        // README + Downloads
+        const readmeLayout = document.getElementById("readmeLayout");
+        const readmeEl = document.getElementById("readmeContent");
+        const sidebarEl = document.getElementById("readmeSidebar");
+        const hasReadme = !!project.docs.readme;
+        const hasDownloads = project.docs.downloads?.length > 0;
+
+        if ((hasReadme || hasDownloads) && readmeLayout) {
+          readmeLayout.style.display = "";
+          if (hasReadme && readmeEl) {
+            readmeEl.innerHTML = `<div class="readme-body doc-content">${formatDocContent(project.docs.readme)}</div>`;
+          }
+          if (hasDownloads && sidebarEl) {
+            const dlIcons = { ".zip": "📦", ".mcaddon": "🧩", ".mcpack": "🧩", source: "📄" };
+            let dlHTML = `<div class="download-card"><h3>Downloads</h3>`;
+            project.docs.downloads.forEach(dl => {
+              const icon = dlIcons[dl.type] || "📥";
+              dlHTML += `<a href="${dl.url}" class="download-btn" target="_blank" rel="noopener noreferrer"><span class="download-icon">${icon}</span><span class="download-info"><span class="download-label">${dl.label}</span><span class="download-meta">${dl.type}</span></span></a>`;
+            });
+            dlHTML += `</div>`;
+            sidebarEl.innerHTML = dlHTML;
+          } else if (sidebarEl) {
+            sidebarEl.style.display = "none";
+            readmeLayout.classList.add("readme-no-sidebar");
+          }
+        }
+
+        // Build sidebar + content
+        const sections = project.docs.sections || [];
+        let navHTML = "";
+        let contentHTML = "";
+
+        // Group sections: { null: [...ungrouped], "Group Name": [...grouped] }
+        const groups = [];
+        const groupMap = {};
+
+        sections.forEach((section, i) => {
+          const id = section.id || section.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+          const entry = { ...section, _id: id, _index: i };
+          const g = section.group || null;
+          if (!groupMap[g]) {
+            groupMap[g] = [];
+            groups.push(g);
+          }
+          groupMap[g].push(entry);
+        });
+
+        let firstSection = true;
+
+        groups.forEach(g => {
+          const items = groupMap[g];
+
+          if (g) {
+            // Collapsible group
+            const gid = "grp-" + g.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+            navHTML += `<div class="docs-nav-group" data-group="${gid}">`;
+            navHTML += `<button class="docs-nav-group-toggle open" aria-expanded="true" data-target="${gid}">
+              <svg class="docs-nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              ${g}
+            </button>`;
+            navHTML += `<div class="docs-nav-group-items open" id="${gid}"><div class="docs-nav-group-inner">`;
+          }
+
+          items.forEach(entry => {
+            const activeClass = firstSection ? " active" : "";
+            const badgeHTML = entry.badge ? ` <span class="docs-nav-badge">${entry.badge}</span>` : "";
+            navHTML += `<a href="#${entry._id}" class="docs-nav-link${activeClass}" data-section="${entry._id}">${entry.title}${badgeHTML}</a>`;
+            firstSection = false;
+
+            const rendered = formatDocContent(entry.content);
+            const sectionBadge = entry.badge ? `<span class="doc-section-badge">${entry.badge}</span>` : "";
+            contentHTML += `
+              <article class="doc-section reveal" id="${entry._id}">
+                <div class="doc-section-header"><h2>${entry.title}</h2>${sectionBadge}</div>
+                <div class="doc-content">${rendered}</div>
+              </article>
+            `;
+          });
+
+          if (g) {
+            navHTML += `</div></div></div>`;
+          }
+        });
+
+        // Add images section if present
+        if (project.docs.images?.length) {
+          navHTML += `<a href="#gallery" class="docs-nav-link" data-section="gallery">Gallery</a>`;
+          let imgsHTML = project.docs.images.map(img => {
+            const alt = img.alt || project.title;
+            const cap = img.caption ? `<figcaption>${img.caption}</figcaption>` : "";
+            return `<figure class="doc-image"><img src="${img.url}" alt="${alt}" loading="lazy">${cap}</figure>`;
+          }).join("");
+          contentHTML += `
+            <article class="doc-section reveal" id="gallery">
+              <h2>Gallery</h2>
+              <div class="doc-images-grid">${imgsHTML}</div>
+            </article>
+          `;
+        }
+
+        docsNav.innerHTML = navHTML;
+        docsMain.innerHTML = contentHTML;
+
+        // Group toggle handlers
+        docsNav.querySelectorAll(".docs-nav-group-toggle").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const target = document.getElementById(btn.dataset.target);
+            if (!target) return;
+            const isOpen = btn.classList.toggle("open");
+            target.classList.toggle("open", isOpen);
+            btn.setAttribute("aria-expanded", isOpen);
+          });
+        });
+
+        // Observe reveals
+        docsMain.querySelectorAll(".reveal").forEach(el => revealObserver.observe(el));
+
+        // Sidebar scroll-spy
+        const navLinks = docsNav.querySelectorAll(".docs-nav-link");
+        const sectionEls = docsMain.querySelectorAll(".doc-section");
+
+        const spyObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              navLinks.forEach(l => l.classList.remove("active"));
+              const match = docsNav.querySelector(`[data-section="${entry.target.id}"]`);
+              if (match) {
+                match.classList.add("active");
+                // Auto-expand parent group if collapsed
+                const group = match.closest(".docs-nav-group");
+                if (group) {
+                  const btn = group.querySelector(".docs-nav-group-toggle");
+                  const items = group.querySelector(".docs-nav-group-items");
+                  if (btn && items && !btn.classList.contains("open")) {
+                    btn.classList.add("open");
+                    items.classList.add("open");
+                    btn.setAttribute("aria-expanded", "true");
+                  }
+                }
+              }
+            }
+          });
+        }, { rootMargin: "-20% 0px -60% 0px" });
+
+        sectionEls.forEach(el => spyObserver.observe(el));
+
+        // Smooth scroll on nav click
+        navLinks.forEach(link => {
+          link.addEventListener("click", (e) => {
+            e.preventDefault();
+            const target = document.getElementById(link.dataset.section);
+            if (target) {
+              target.scrollIntoView({ behavior: "smooth", block: "start" });
+              history.replaceState(null, "", `#${link.dataset.section}`);
+            }
+          });
+        });
+
+        // Jump to hash on load
+        if (window.location.hash) {
+          const target = document.getElementById(window.location.hash.slice(1));
+          if (target) setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
+        }
+      })
+      .catch(() => {
+        projectHeroContent.innerHTML = `<h1>Error</h1><p>Failed to load project data.</p>`;
+        document.getElementById("docsLayout").style.display = "none";
+      });
+  }
+}
+
+function formatDocContent(text) {
+  if (!text) return "";
+
+  // Split by code blocks first to protect them
+  const parts = text.split(/(```[\s\S]*?```)/g);
+
+  return parts.map(part => {
+    if (part.startsWith("```")) {
+      // Code block with copy button
+      const match = part.match(/^```(\w*)\n?([\s\S]*?)```$/);
+      const lang = match?.[1] || "";
+      const code = match?.[2] || part.slice(3, -3);
+      const escaped = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const langLabel = lang ? `<span class="code-lang">${lang}</span>` : "";
+      return `<div class="code-block-wrapper">${langLabel}<button class="code-copy-btn" aria-label="Copy code" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').textContent);this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button><pre><code${lang ? ` class="lang-${lang}"` : ""}>${escaped}</code></pre></div>`;
+    }
+
+    // Process paragraph-level blocks
+    return part
+      .split("\n\n")
+      .map(paragraph => {
+        let p = paragraph.trim();
+        if (!p) return "";
+
+        // Horizontal rule
+        if (/^-{3,}$/.test(p)) {
+          return `<hr class="doc-divider">`;
+        }
+
+        // Image block: ![alt](url)
+        const imgBlockMatch = p.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+        if (imgBlockMatch) {
+          const alt = imgBlockMatch[1].replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          const caption = alt ? `<figcaption>${alt}</figcaption>` : "";
+          return `<figure class="doc-inline-image"><img src="${imgBlockMatch[2]}" alt="${alt}" loading="lazy">${caption}</figure>`;
+        }
+
+        // Callout blocks: > [!type] content
+        const calloutMatch = p.match(/^>\s*\[!(info|warning|tip|note)\]\s*([\s\S]*)$/i);
+        if (calloutMatch) {
+          const type = calloutMatch[1].toLowerCase();
+          let body = calloutMatch[2].replace(/\n>\s?/g, "\n").trim();
+          body = inlineFormat(body);
+          const icons = { info: "ℹ", warning: "⚠", tip: "💡", note: "📝" };
+          const labels = { info: "Info", warning: "Warning", tip: "Tip", note: "Note" };
+          return `<div class="doc-callout doc-callout-${type}"><span class="doc-callout-icon">${icons[type]}</span><div><strong class="doc-callout-title">${labels[type]}</strong><p>${body}</p></div></div>`;
+        }
+
+        // Blockquote: > text
+        if (p.startsWith("> ")) {
+          let body = p.replace(/^>\s?/gm, "").trim();
+          body = inlineFormat(body);
+          return `<blockquote class="doc-blockquote"><p>${body}</p></blockquote>`;
+        }
+
+        // Table: | col | col |
+        if (p.includes("|") && /^\|.*\|$/m.test(p)) {
+          const rows = p.split("\n").filter(r => r.trim().startsWith("|"));
+          if (rows.length >= 2) {
+            const parseRow = r => r.split("|").slice(1, -1).map(c => c.trim());
+            const headers = parseRow(rows[0]);
+            // Skip separator row (|---|---|)
+            const startIdx = /^[\s|:-]+$/.test(rows[1]) ? 2 : 1;
+            const bodyRows = rows.slice(startIdx);
+            let table = `<div class="doc-table-wrapper"><table class="doc-table"><thead><tr>${headers.map(h => `<th>${inlineFormat(h)}</th>`).join("")}</tr></thead><tbody>`;
+            bodyRows.forEach(r => {
+              const cells = parseRow(r);
+              table += `<tr>${cells.map(c => `<td>${inlineFormat(c)}</td>`).join("")}</tr>`;
+            });
+            table += `</tbody></table></div>`;
+            return table;
+          }
+        }
+
+        // Headings: # ## ### ####
+        const headingMatch = p.match(/^(#{1,4})\s+(.+)/);
+        if (headingMatch) {
+          const level = headingMatch[1].length;
+          const hText = inlineFormat(headingMatch[2]);
+          const cls = ["", "doc-heading-lg", "doc-heading", "doc-subheading", "doc-subheading-sm"][level];
+          return `<h${level} class="${cls}">${hText}</h${level}>`;
+        }
+
+        // Numbered list (check before bullet lists)
+        if (/^1[\.\)]\s/.test(p)) {
+          const items = p.split(/\n/).map(line => {
+            return line.replace(/^\d+[\.\)]\s*/, "");
+          });
+          return `<ol>${items.map(item => `<li>${inlineFormat(item)}</li>`).join("")}</ol>`;
+        }
+
+        // Bullet lists
+        if (/^- /.test(p) || /\n- /.test(p)) {
+          const items = p.split(/\n/).filter(l => l.trim()).map(line => {
+            return line.replace(/^- /, "");
+          });
+          return `<ul>${items.map(item => `<li>${inlineFormat(item)}</li>`).join("")}</ul>`;
+        }
+
+        // Regular paragraph
+        p = inlineFormat(p);
+        p = p.replace(/\n/g, "<br>");
+        return `<p>${p}</p>`;
+      })
+      .join("");
+  }).join("");
+}
+
+function inlineFormat(text) {
+  return text
+    // Bold
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    // Italic
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    // Inline code
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    // Keyboard keys [[Ctrl]]
+    .replace(/\[\[([^\]]+)\]\]/g, '<kbd class="doc-kbd">$1</kbd>')
+    // Inline images ![alt](url)
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="doc-inline-img" loading="lazy">')
+    // Links [text](url)
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" class="doc-link" target="_blank" rel="noopener noreferrer">$1</a>')
+    // Strikethrough ~~text~~
+    .replace(/~~(.*?)~~/g, "<del>$1</del>");
 }
 
 // ========================
@@ -133,12 +489,15 @@ function applySettings() {
     theme: settingElements.theme?.value || "dark",
     density: settingElements.density?.value || "glass",
     font: settingElements.font?.value || "normal",
-    animation: settingElements.animation?.value || "1",
-    radius: settingElements.radius?.value || "1",
+    animation: settingElements.animation?.value || "50",
+    radius: settingElements.radius?.value || "50",
   };
 
-  // Reset classes (optimized single pass)
+  // Reset theme/style classes while preserving state classes
+  const preserveClasses = ["settings-open", "dev-mode", "page-transitioning"];
+  const kept = preserveClasses.filter(c => document.body.classList.contains(c));
   document.body.className = "";
+  kept.forEach(c => document.body.classList.add(c));
 
   // Apply theme
   document.body.classList.add(`theme-${settings.theme}`);
@@ -146,10 +505,21 @@ function applySettings() {
   // Apply other settings based on non-default values
   if (settings.density === "solid") document.body.classList.add("style-solid");
   if (settings.font === "large") document.body.classList.add("font-large");
-  if (settings.animation === "0") document.body.classList.add("reduce-motion");
-  if (settings.animation === "2") document.body.classList.add("motion-dynamic");
-  if (settings.radius === "0") document.body.classList.add("radius-tight");
-  if (settings.radius === "2") document.body.classList.add("radius-soft");
+
+  // Animation: 0=off, 50=normal, 100=dynamic (continuous)
+  const anim = parseInt(settings.animation);
+  if (anim === 0) {
+    document.body.classList.add("reduce-motion");
+  }
+  const motionDistance = (anim / 100) * 38;
+  const motionDuration = 0.2 + (anim / 100) * 0.75;
+  document.body.style.setProperty("--motion-distance", motionDistance + "px");
+  document.body.style.setProperty("--motion-duration", motionDuration + "s");
+
+  // Radius: 0=sharp, 50=normal, 100=soft (continuous)
+  const rad = parseInt(settings.radius);
+  const radiusScale = 0.5 + (rad / 100) * 1.0;
+  document.body.style.setProperty("--radius-scale", radiusScale.toFixed(2));
 
   // Save to localStorage (single operation)
   localStorage.setItem("site-settings", JSON.stringify(settings));
@@ -159,6 +529,14 @@ function applySettings() {
 function loadSettings() {
   const saved = JSON.parse(localStorage.getItem("site-settings"));
   if (!saved) return;
+
+  // Migrate old 0/1/2 slider values to 0-100 scale
+  if (saved.animation !== undefined && parseInt(saved.animation) <= 2) {
+    saved.animation = String({ "0": 0, "1": 50, "2": 100 }[saved.animation] ?? 50);
+  }
+  if (saved.radius !== undefined && parseInt(saved.radius) <= 2) {
+    saved.radius = String({ "0": 0, "1": 50, "2": 100 }[saved.radius] ?? 50);
+  }
 
   Object.entries(saved).forEach(([key, value]) => {
     if (settingElements[key]) settingElements[key].value = value;
@@ -315,7 +693,30 @@ class CustomSlider {
   constructor(inputElement) {
     this.input = inputElement;
     this.wrapper = this.input.parentElement;
+    this.labels = this.getLabels();
     this.init();
+  }
+
+  getLabels() {
+    const id = this.input.id;
+    if (id === "animationLevel") {
+      return { 0: "Off", 15: "Minimal", 35: "Subtle", 50: "Normal", 70: "Lively", 85: "Bold", 100: "Dynamic" };
+    }
+    if (id === "radiusLevel") {
+      return { 0: "Sharp", 20: "Tight", 40: "Moderate", 50: "Normal", 65: "Rounded", 85: "Soft", 100: "Pill" };
+    }
+    return null;
+  }
+
+  getLabel(value) {
+    if (!this.labels) return value;
+    const v = parseInt(value);
+    const keys = Object.keys(this.labels).map(Number).sort((a, b) => a - b);
+    let closest = keys[0];
+    for (const k of keys) {
+      if (Math.abs(k - v) < Math.abs(closest - v)) closest = k;
+    }
+    return this.labels[closest];
   }
 
   init() {
@@ -331,13 +732,14 @@ class CustomSlider {
     const thumb = document.createElement('div');
     thumb.className = 'custom-slider-thumb';
     thumb.setAttribute('role', 'slider');
+    thumb.setAttribute('tabindex', '0');
     thumb.setAttribute('aria-valuemin', this.input.min || '0');
     thumb.setAttribute('aria-valuemax', this.input.max || '100');
     this.updateThumbPosition();
     
     const value = document.createElement('div');
     value.className = 'custom-slider-value';
-    value.textContent = this.input.value;
+    value.textContent = this.getLabel(this.input.value);
     
     track.appendChild(fill);
     track.appendChild(thumb);
@@ -360,25 +762,25 @@ class CustomSlider {
     
     const updateValue = (e) => {
       const rect = this.track.getBoundingClientRect();
-      let x = e.clientX - rect.left;
-      if (e.touches) x = e.touches[0].clientX - rect.left;
+      let x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
       
       x = Math.max(0, Math.min(x, rect.width));
       const percentage = (x / rect.width) * 100;
-      const min = this.input.min || 0;
-      const max = this.input.max || 100;
-      const value = Math.round((percentage / 100) * (max - min) + parseInt(min));
+      const min = parseInt(this.input.min) || 0;
+      const max = parseInt(this.input.max) || 100;
+      const value = Math.round((percentage / 100) * (max - min) + min);
       
       this.input.value = value;
-      this.valueDisplay.textContent = value;
+      this.valueDisplay.textContent = this.getLabel(value);
       this.updateThumbPosition();
       this.input.dispatchEvent(new Event('input', { bubbles: true }));
       this.input.dispatchEvent(new Event('change', { bubbles: true }));
     };
     
-    const startDrag = () => {
+    const startDrag = (e) => {
       isDragging = true;
       this.thumb.classList.add('dragging');
+      updateValue(e);
     };
     
     const endDrag = () => {
@@ -387,34 +789,52 @@ class CustomSlider {
     };
     
     const handleMove = (e) => {
-      if (isDragging) updateValue(e);
+      if (isDragging) {
+        e.preventDefault();
+        updateValue(e);
+      }
     };
     
-    this.thumb.addEventListener('mousedown', startDrag);
-    this.track.addEventListener('mousedown', updateValue);
     this.track.addEventListener('mousedown', startDrag);
-    
-    this.thumb.addEventListener('touchstart', startDrag);
-    this.track.addEventListener('touchstart', updateValue);
-    this.track.addEventListener('touchstart', startDrag);
+    this.track.addEventListener('touchstart', startDrag, { passive: false });
     
     document.addEventListener('mousemove', handleMove);
-    document.addEventListener('touchmove', handleMove);
+    document.addEventListener('touchmove', handleMove, { passive: false });
     document.addEventListener('mouseup', endDrag);
     document.addEventListener('touchend', endDrag);
+
+    // Keyboard support
+    this.thumb.addEventListener('keydown', (e) => {
+      const min = parseInt(this.input.min) || 0;
+      const max = parseInt(this.input.max) || 100;
+      let val = parseInt(this.input.value);
+      const step = 5;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); val = Math.min(max, val + step); }
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); val = Math.max(min, val - step); }
+      else return;
+      this.input.value = val;
+      this.valueDisplay.textContent = this.getLabel(val);
+      this.updateThumbPosition();
+      this.input.dispatchEvent(new Event('input', { bubbles: true }));
+      this.input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
     
-    this.input.addEventListener('input', () => this.updateThumbPosition());
+    this.input.addEventListener('input', () => {
+      this.updateThumbPosition();
+      this.valueDisplay.textContent = this.getLabel(this.input.value);
+    });
   }
 
   updateThumbPosition() {
-    const min = this.input.min || 0;
-    const max = this.input.max || 100;
+    const min = parseInt(this.input.min) || 0;
+    const max = parseInt(this.input.max) || 100;
     const value = this.input.value;
     const percentage = ((value - min) / (max - min)) * 100;
     
     this.thumb.style.left = percentage + '%';
     this.fill.style.width = percentage + '%';
     this.thumb.setAttribute('aria-valuenow', value);
+    this.thumb.setAttribute('aria-valuetext', this.getLabel(value));
   }
 }
 
@@ -431,9 +851,163 @@ function handleResize() {
     navLinks?.classList.remove("open");
     navToggle?.classList.remove("active");
   }
+  if (interactiveBg) interactiveBg.resize();
 }
 
 window.addEventListener("resize", handleResize);
+
+// ========================
+// INTERACTIVE BACKGROUND
+// ========================
+const interactiveBg = (() => {
+  const canvas = document.createElement("canvas");
+  canvas.id = "interactiveBg";
+  canvas.setAttribute("aria-hidden", "true");
+  Object.assign(canvas.style, {
+    position: "fixed", top: "0", left: "0", width: "100%", height: "100%",
+    zIndex: "-1", pointerEvents: "none"
+  });
+  document.body.prepend(canvas);
+
+  const ctx = canvas.getContext("2d");
+  let w, h, particles = [], mouse = { x: -9999, y: -9999 }, animId;
+  const COUNT = Math.min(60, Math.floor(window.innerWidth / 22));
+  const INTERACT_RADIUS = 140;
+  const LINE_DIST = 120;
+
+  function getAccentColor() {
+    const accent = getComputedStyle(document.body).getPropertyValue("--accent").trim();
+    // Parse hex to rgb
+    if (accent.startsWith("#")) {
+      const hex = accent.replace("#", "");
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      return { r, g, b };
+    }
+    return { r: 240, g: 196, b: 107 };
+  }
+
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+
+  function createParticles() {
+    particles = [];
+    for (let i = 0; i < COUNT; i++) {
+      particles.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        r: Math.random() * 2 + 1,
+        baseAlpha: Math.random() * 0.3 + 0.1
+      });
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    const color = getAccentColor();
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+
+      // Drift
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Wrap edges
+      if (p.x < -10) p.x = w + 10;
+      if (p.x > w + 10) p.x = -10;
+      if (p.y < -10) p.y = h + 10;
+      if (p.y > h + 10) p.y = -10;
+
+      // Mouse interaction — push away gently
+      const dx = p.x - mouse.x;
+      const dy = p.y - mouse.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < INTERACT_RADIUS && dist > 0) {
+        const force = (1 - dist / INTERACT_RADIUS) * 1.5;
+        p.vx += (dx / dist) * force * 0.15;
+        p.vy += (dy / dist) * force * 0.15;
+      }
+
+      // Dampen velocity
+      p.vx *= 0.985;
+      p.vy *= 0.985;
+
+      // Brightness boost near cursor
+      const alpha = dist < INTERACT_RADIUS
+        ? p.baseAlpha + (1 - dist / INTERACT_RADIUS) * 0.5
+        : p.baseAlpha;
+
+      // Draw particle
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+      ctx.fill();
+
+      // Draw lines between nearby particles
+      for (let j = i + 1; j < particles.length; j++) {
+        const p2 = particles[j];
+        const ldx = p.x - p2.x;
+        const ldy = p.y - p2.y;
+        const ldist = Math.sqrt(ldx * ldx + ldy * ldy);
+        if (ldist < LINE_DIST) {
+          const lineAlpha = (1 - ldist / LINE_DIST) * 0.12;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${lineAlpha})`;
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+        }
+      }
+    }
+
+    animId = requestAnimationFrame(draw);
+  }
+
+  // Mouse tracking
+  document.addEventListener("mousemove", (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+  document.addEventListener("mouseleave", () => {
+    mouse.x = -9999;
+    mouse.y = -9999;
+  });
+
+  // Touch support
+  document.addEventListener("touchmove", (e) => {
+    mouse.x = e.touches[0].clientX;
+    mouse.y = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener("touchend", () => {
+    mouse.x = -9999;
+    mouse.y = -9999;
+  });
+
+  // Respect reduced motion
+  const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  function checkMotion() {
+    if (motionQuery.matches || document.body.classList.contains("reduce-motion")) {
+      cancelAnimationFrame(animId);
+      ctx.clearRect(0, 0, w, h);
+    } else {
+      draw();
+    }
+  }
+
+  // Init
+  resize();
+  createParticles();
+  draw();
+
+  return { resize: () => { resize(); createParticles(); } };
+})();
 
 // ========================
 // OPTIONAL: SMOOTH CARD TILT (OPTIMIZED - Event Delegation)
@@ -474,6 +1048,42 @@ cardContainer.addEventListener("mouseleave", () => {
     currentTiltCard = null;
   }
 });
+
+// ========================
+// CURSOR GLOW — global light following the mouse
+// ========================
+(() => {
+  const glow = document.createElement("div");
+  glow.classList.add("cursor-glow");
+  document.body.appendChild(glow);
+
+  let cx = -200, cy = -200, tx = -200, ty = -200, visible = false, rafId;
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function tick() {
+    cx = lerp(cx, tx, 0.15);
+    cy = lerp(cy, ty, 0.15);
+    glow.style.transform = `translate(${cx}px, ${cy}px)`;
+    rafId = requestAnimationFrame(tick);
+  }
+
+  document.addEventListener("mousemove", (e) => {
+    tx = e.clientX;
+    ty = e.clientY;
+    if (!visible) {
+      visible = true;
+      glow.style.opacity = "1";
+    }
+  });
+
+  document.addEventListener("mouseleave", () => {
+    visible = false;
+    glow.style.opacity = "0";
+  });
+
+  tick();
+})();
 
 // ========================
 // PREMIUM: SCROLL-TRIGGERED HEADER STATE (OPTIMIZED)

@@ -754,7 +754,6 @@ class CustomSlider {
     thumb.setAttribute('tabindex', '0');
     thumb.setAttribute('aria-valuemin', this.input.min || '0');
     thumb.setAttribute('aria-valuemax', this.input.max || '100');
-    this.updateThumbPosition();
     
     const value = document.createElement('div');
     value.className = 'custom-slider-value';
@@ -773,6 +772,7 @@ class CustomSlider {
     this.thumb = thumb;
     this.valueDisplay = value;
     
+    this.updateThumbPosition();
     this.bindEvents();
   }
 
@@ -884,7 +884,7 @@ const interactiveBg = (() => {
   canvas.setAttribute("aria-hidden", "true");
   Object.assign(canvas.style, {
     position: "fixed", top: "0", left: "0", width: "100%", height: "100%",
-    zIndex: "-1", pointerEvents: "none"
+    zIndex: "0", pointerEvents: "none"
   });
   document.body.prepend(canvas);
 
@@ -1027,7 +1027,6 @@ const interactiveBg = (() => {
 
   return { resize: () => { resize(); createParticles(); } };
 })();
-
 // ========================
 // OPTIONAL: SMOOTH CARD TILT (OPTIMIZED - Event Delegation)
 // Only on devices with hover (not touch)

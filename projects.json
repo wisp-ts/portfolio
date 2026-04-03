@@ -475,7 +475,7 @@
     "description": "A collection of 4 polished browser mini-games — Snake, Memory Match, Tic Tac Toe (vs AI), and Reaction Time — all in a single self-contained page.",
     "stack": ["HTML5 Canvas", "CSS3", "Vanilla JS", "Minimax AI"],
     "links": [
-      { "label": "Live Demo", "url": "gamehub.html", "style": "primary", "preview": "gamehub.html" },
+      { "label": "Live Demo", "url": "https://gamehub-two-roan.vercel.app/", "style": "primary", "preview": "gamehub.html" },
       { "label": "View Project", "url": "project.html?slug=game-hub", "style": "secondary" }
     ],
     "docs": {

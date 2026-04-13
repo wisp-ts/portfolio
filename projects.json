@@ -6,7 +6,7 @@
   "description": "A fully-typed, validated, and scalable form system for Minecraft Bedrock Script API with builders, presets, and structured error handling.",
   "stack": ["TypeScript", "Minecraft Script API", "JavaScript", "UI Systems"],
   "links": [
-    { "label": "Source", "url": "https://github.com/wispts", "style": "secondary" }
+    { "label": "Source", "url": "https://github.com/wisp-ts/forms-plus", "style": "secondary" }
   ],
   "docs": {
     "hero": "Forms+ is a fully-typed abstraction layer over @minecraft/server-ui that replaces fragile, unvalidated UI code with a structured system built around validation, retry handling, builders, and predictable execution.",

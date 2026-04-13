@@ -440,7 +440,6 @@
       "hero": "A Minecraft Bedrock system for attaching configurable triggers and command sequences to custom items — no code changes needed per item.",
       "readme": "# Item Manager\n\nAttach triggers and command sequences to custom Minecraft items.\n\n![Item Manager Preview](https://placehold.co/800x400/1a1a2e/b08aff?text=Item+Manager)\n\n## About\n\nItem Manager is a TypeScript-based system for Minecraft Bedrock that lets you define custom item behaviors through JSON configuration files. Instead of writing script logic for every item, you define triggers (`onUse`, `onHit`, `onEquip`) and map them to command sequences.\n\n## Features\n\n- **Config-Driven** — Define items in JSON, no code changes needed\n- **Multiple Triggers** — `onUse`, `onHit`, `onEquip` events\n- **Command Sequences** — Chain effects, particles, and sounds\n- **Hot Reload** — Add items without restarting the world\n- **TypeScript** — Clean, typed codebase\n\n## Quick Example\n\n```json\n{\n  \"item\": \"custom:fire_wand\",\n  \"triggers\": {\n    \"onUse\": [\n      \"effect @s fire_resistance 10 1\",\n      \"particle minecraft:flame_particle ~ ~1 ~\",\n      \"playsound fire.ignite @s\"\n    ]\n  }\n}\n```\n\n![Trigger Flow](https://placehold.co/800x350/1a1a2e/f0c46b?text=Trigger+%E2%86%92+Commands)\n\n## Installation\n\n1. Download the pack from the sidebar\n2. Import into Minecraft\n3. Define items in the `items/` directory\n4. Enable **Beta APIs** in world settings\n\n> [!warning] Beta APIs must be enabled or triggers won't fire.\n\n> [!tip] Adding a new item is purely a config change — no TypeScript editing required.",
       "downloads": [
-        { "label": "Behavior Pack", "url": "#", "type": ".mcpack" },
         { "label": "Source Code", "url": "https://github.com/wisp-ts/Item-Manager", "type": ".zip" }
       ],
       "images": [],
@@ -474,8 +473,7 @@
     "description": "A collection of 4 polished browser mini-games — Snake, Memory Match, Tic Tac Toe (vs AI), and Reaction Time — all in a single self-contained page.",
     "stack": ["HTML5 Canvas", "CSS3", "Vanilla JS", "Minimax AI"],
     "links": [
-      { "label": "Live Demo", "url": "https://gamehub.wispts.xyz/", "style": "primary", "preview": "gamehub.html" },
-      { "label": "View Project", "url": "project.html?slug=game-hub", "style": "secondary" }
+      { "label": "Live Demo", "url": "https://gamehub.wispts.xyz/", "style": "primary", "preview": "https://gamehub.wispts.xyz/" },
     ],
     "docs": {
       "hero": "4 polished mini-games in one self-contained HTML page — pick a game from the hub and play instantly.",

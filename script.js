@@ -40,7 +40,7 @@ if (projectGrid) {
         }).join("");
 
         const learnMoreHTML = project.slug && project.docs
-          ? `<a href="project.html?p=${encodeURIComponent(project.slug)}" class="button secondary small">Learn More</a>`
+          ? `<a href="project.html?p=${encodeURIComponent(project.slug)}" class="button secondary small">Documentation</a>`
           : "";
 
         article.innerHTML = `
